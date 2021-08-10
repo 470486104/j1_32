@@ -25,22 +25,20 @@ module wb_arbiter(
 	
 	
 	(* KEEP="TRUE" *)reg[`CpuNumWidth] queue[0:7];
-	(* KEEP="TRUE" *)reg[2:0] first, last;
+	(* KEEP="TRUE" *)reg[2:0] first, last, _last, cpu0_last;
 	reg[`CpuNumWidth] new_cpu;
-	reg cpu0_on,cpu0_off;
+	reg cpu0_on,cpu0_off,cpu0_flag;
 	
 	always @(posedge clk)
 	begin
 		if(rst)
 		begin
-			last <= 0;
 			cpu0_off <= 0;
 		end else
 		begin
 			if(cpu0_on)
 			begin
-				queue[last] <= cpu0_num;
-				last <= last + 1;
+				queue[cpu0_last] <= cpu0_num;
 				cpu0_off <= 1;
 			end else if(!cpu0_cyc_o)
 				cpu0_off <= 0;
@@ -52,39 +50,44 @@ module wb_arbiter(
 	always @(*)
 	begin
 		if(rst)
-			cpu0_on = 0;
-		else if(cpu0_cyc_o)
-			if(cpu0_off)
-				cpu0_on = 0;
-			else
-				cpu0_on = 1;
-		else
-			cpu0_on = 0;
-	end
-	
-	/* always @(rst,last,wb_stb)
-	begin
-		if(rst)
 		begin
-			first = 0;
-			new_cpu = 1;
-		end else if(!wb_stb)
+			_last = 0;
+			
+			cpu0_flag = 1;
+			cpu0_last = 0;
+			cpu0_on = 0;
+		end else 
 		begin
-			if(first == last)
-				new_cpu = 1;
-			else 
+			if(cpu0_cyc_o)
 			begin
-				new_cpu = queue[first];
-				first = first + 1;
+				if(cpu0_off)
+						cpu0_on = 0;
+					else
+						cpu0_on = 1;
+				if(cpu0_flag)
+				begin
+					cpu0_last = _last;
+					_last = _last + 1;
+				end else
+					cpu0_last = 0;
+				cpu0_flag = 0;
+			end else
+			begin
+				cpu0_flag = 1;
+				cpu0_last = 0;
+				cpu0_on = 0;
 			end 
 		end 
-	end  */
+	end
+	
+
 	
 	always @(posedge clk)
 	begin
 		if(rst)
 		begin
 			first <= 0;
+			last <= 0;
 			new_cpu <= 3;
 		end else if(!wb_stb)
 		begin
@@ -95,9 +98,12 @@ module wb_arbiter(
 				new_cpu <= queue[first];
 				first <= first + 1;
 			end
-		end else if(!cpu0_cyc_o)
+			last <= _last;
+		end else
 		begin
-			new_cpu <= 3;
+			last <= _last;
+			if(wb_ack)
+				new_cpu <= 3;
 		end 
 	end 
 	
