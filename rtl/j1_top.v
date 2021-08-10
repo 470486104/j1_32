@@ -2,7 +2,6 @@
 `timescale 1ns / 1ps
 module j1_top(
 	input  		clk_in	,
-	input		rst_in	,
 	input  		rx		,
 	output 		tx
 );
@@ -48,11 +47,9 @@ module j1_top(
 
 	// ¸´Î»ÐÅºÅ
 	reg[4-1:0] count = 4'b1111;
-	always @(posedge clk or posedge rst_in)
+	always @(posedge clk)
 	begin
-		if(rst_in)
-			count <= 4'b1111;
-		else if(count > 1'b0)
+		if(count > 1'b0)
 			count <= count - 1'b1;
 	end
 	assign rst = count > 0 ? 1'b1 : 1'b0 ;
