@@ -2,12 +2,16 @@
 `timescale 1ns / 1ps
 module j1_top(
 	input  		clk_in	,
+	input		rst_in	,
+	input		key2	,
 	input  		rx		,
 	output 		tx
 );
 
 	wire clk;
 	wire rst;
+	
+	reg[`CpuNumWidth] u_n;
 	
 	wire [`UartDataWidth]	uart_dout;
 	wire					uart_rd	 ;
@@ -22,6 +26,7 @@ module j1_top(
 	cpu_top cpu(
 		.clk(clk),
 		.rst(rst),
+		.key2(u_n),
 		
 		.uart_dout(uart_dout),
 	    .uart_rd  (uart_rd	), 
@@ -49,9 +54,42 @@ module j1_top(
 	reg[4-1:0] count = 4'b1111;
 	always @(posedge clk)
 	begin
-		if(count > 1'b0)
+		if(rst_in)
+			count <= 4'b1111;
+		else if(count > 1'b0)
 			count <= count - 1'b1;
 	end
 	assign rst = count > 0 ? 1'b1 : 1'b0 ;
+	
+	
+	
+	// 按键消抖
+	parameter DURATION = 50_000;                           //延时10ms	
+	reg [15:0] cnt; 
+	
+	wire ken_enable;
+	assign ken_enable = key2; //只要任意按键被按下，相应的按键进行消抖
+	
+	always @(posedge clk)
+	begin
+		if(rst)
+			cnt <= 16'b0;
+		else if(ken_enable == 1) begin
+			if(cnt == DURATION)
+				cnt <= cnt;
+			else 
+				cnt <= cnt + 1'b1;
+			end
+		else
+			cnt <= 16'b0;
+	end
+
+	always @(posedge clk)
+	begin
+		if(rst)
+			u_n <= 0;
+		else if(cnt == 25)
+			u_n <= u_n + 1;
+	end
 	
 endmodule

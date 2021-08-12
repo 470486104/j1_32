@@ -1,5 +1,6 @@
 `define ForthFile			"E:/j1_32.hex"
 `define RamSize				0:8191
+`define RomSize				0:4096
 
 `define PcWidth 			31:0	// 指令宽
 `define DataWidth 			31:0	// 数据宽
@@ -29,4 +30,4 @@
 
 `define CpuNumWidth 		1:0		// cpu核心数位宽
 `define CpuNum		 		3		// cpu核心数
-`define CpuSelWidth			0:2		// cpu列表宽
+`define CpuSelWidth			2:0		// cpu列表宽

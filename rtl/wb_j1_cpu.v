@@ -1,7 +1,13 @@
 `include "define.v"
-module wb_j1_cpu(
+module wb_j1_cpu
+#(
+	parameter is_master = 1,
+	parameter num = 0
+ )
+(
 	input clk, 
 	input rst, 
+	input wire[1:0] key2,
 	
 	input  wire	[`DataWidth]		dat_i			,
 	input  wire						ack_i			,
@@ -14,14 +20,14 @@ module wb_j1_cpu(
 	output wire	[`PcWidth]			pc_o			,
 	
 	input  wire	[`UartDataWidth]	cpu_uart_dat_i	,
-	output wire	[`CpuNumWidth]		cpu_uart_num	,
+	output reg	[`CpuNumWidth]		cpu_uart_num	,
 	output wire	[`UartDataWidth]	cpu_uart_dat_o	,
 	output wire						cpu_uart_rd_o	,
 	output wire						cpu_uart_wr_o	,
 	output wire						cpu_uart_adr_o	
 );
 
-	assign cpu_num = 0;
+	assign cpu_num = num;
 	/* always @(posedge clk)
 	begin
 		cpu_num <= 0;
@@ -242,48 +248,27 @@ module wb_j1_cpu(
 		end
 	end
 	
-	assign cpu_uart_num	= cpu_num;
+	/* generate
+		if(is_master)
+		begin
+			
+		end 
+	endgenerate */
+	
+	always @(posedge clk)
+	begin
+		if(rst)
+			cpu_uart_num <= 0;
+		else
+			cpu_uart_num <= key2;
+	end 
+	
+	
 	assign cpu_uart_rd_o = is_from_mem & (st0[`UartAddrBit] == 4'b1111);
 	assign cpu_uart_wr_o = is_to_mem  & (st0[`UartAddrBit] == 4'b1111);
 	assign cpu_uart_adr_o = st0[0];
 	assign cpu_uart_dat_o = st1[7:0];
-	
-	/* always @(*)
-	begin
-		if(rst)
-		begin
-			cpu_uart_num	= cpu_num;
-			cpu_uart_dat_o	= 0;
-			cpu_uart_rd_o	= 0;
-			cpu_uart_wr_o	= 0;
-			cpu_uart_adr_o	= 1;
-		end else
-		begin
-			if(st0[`UartAddrBit] == 4'b1111)
-				if(is_from_mem)
-				begin
-					cpu_uart_rd_o = 1;
-					cpu_uart_wr_o = 0;
-					cpu_uart_adr_o = st0[0];
-					cpu_uart_dat_o = 0;
-				end 
-				else if(is_to_mem)
-				begin
-					cpu_uart_rd_o = 0;
-					cpu_uart_wr_o = 1;
-					cpu_uart_adr_o = st0[0];
-					cpu_uart_dat_o = st1[7:0];
-				end 
-			else
-			begin
-				cpu_uart_rd_o = 0;
-				cpu_uart_wr_o = 0;
-				cpu_uart_adr_o = 1;
-				cpu_uart_dat_o = 0;
-			end
-			cpu_uart_num	= cpu_num;
-		end 
-	end  */
+
 
 	always @(*)
 	begin
@@ -293,33 +278,19 @@ module wb_j1_cpu(
 			adr_o = 0;
 			dat_o = 0;
 			we_o = 0;
-			// data_input = 0;
 		end else if(!cpu_state)
 		begin
 			cyc_o = 1'b1;
 			adr_o = st0;
 			dat_o = st1;
 			we_o = inst_i[`NTo_T_Bit];
-			// data_input = dat_i;
 		end else
 		begin
 			cyc_o = 1'b0;
 			adr_o = 0;
 			dat_o = 0;
 			we_o = 0;
-			// data_input = data_input;
 		end 
-	end
-/* 	always @(posedge clk or posedge ack_i)
-	begin
-		if(rst)
-		begin
-			ack <= 1'b0;
-		end else if(ack_i)
-		begin
-			ack <= 1'b1;
-		end else
-			ack <= 1'b0;
-	end */
+	end
 
 endmodule // j1

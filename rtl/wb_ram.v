@@ -12,13 +12,21 @@ module wb_ram(
 	output reg  [`DataWidth] 	dat_o		,
 	
 	input  wire [`PcWidth]		cpu0_pc_i	,
-	output reg  [`DataWidth]	cpu0_inst_o	
+	output reg  [`DataWidth]	cpu0_inst_o	,
+	
+	input  wire [`PcWidth]		cpu1_pc_i	,
+	output reg  [`DataWidth]	cpu1_inst_o	,
+	
+	input  wire [`PcWidth]		cpu2_pc_i	,
+	output reg  [`DataWidth]	cpu2_inst_o	
 );
 
 
 	reg [`DataWidth] ram[`RamSize]; 
 	initial $readmemh(`ForthFile, ram);
-
+	
+	reg [`DataWidth] rom1[`RomSize]; 
+	initial $readmemh(`ForthFile, rom1);
 
 	wire vaild;
 	assign vaild = cyc_i & stb_i;
@@ -44,5 +52,12 @@ module wb_ram(
 		else
 			ack_o <= 0;
 	end 
+	
+	always @(posedge clk)
+	begin
+		cpu1_inst_o <= rom1[cpu1_pc_i];
+		cpu2_inst_o <= rom1[cpu2_pc_i];
+	end
+	
 	
 endmodule
