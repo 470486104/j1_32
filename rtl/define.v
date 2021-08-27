@@ -1,6 +1,6 @@
 `define ForthFile			"E:/j1_32.hex"
 `define RamSize				0:8191
-`define RomSize				0:4096
+`define RomSize				0:4095
 
 `define PcWidth 			31:0	// Ö¸Áî¿í
 `define DataWidth 			31:0	// Êý¾Ý¿í

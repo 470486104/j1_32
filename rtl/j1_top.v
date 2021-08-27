@@ -36,7 +36,7 @@ module j1_top(
 	);
 
 	// uart
-	miniuart2 uart(
+	miniuart2 uart1(
 		.clk	  (clk),
 		.rst      (rst),
 		.rx		  (rx),
@@ -47,7 +47,7 @@ module j1_top(
 		.io_addr  (uart_addr),
 		.io_din   (uart_din),
 		.io_dout  (uart_dout)
-	);
+	); 
 	
 
 	// 复位信号
@@ -61,15 +61,26 @@ module j1_top(
 	end
 	assign rst = count > 0 ? 1'b1 : 1'b0 ;
 	
-	
-	
+
 	// 按键消抖
-	parameter DURATION = 50_000;                           //延时10ms	
-	reg [15:0] cnt; 
+	parameter DURATION = 50_000_000;                           //延时10ms	
+	reg [31:0] cnt; 
 	
-	wire ken_enable;
-	assign ken_enable = key2; //只要任意按键被按下，相应的按键进行消抖
+	reg ken_enable;
+	// assign ken_enable = key2; //只要任意按键被按下，相应的按键进行消抖
 	
+	always @(posedge clk)
+	begin
+		if(rst)
+		begin
+			ken_enable <= 0;
+		end else if(key2 & !ken_enable)
+		begin
+			ken_enable <= key2;
+		end else if(cnt == DURATION)
+			ken_enable <= 0;
+	end
+
 	always @(posedge clk)
 	begin
 		if(rst)

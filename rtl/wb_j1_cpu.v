@@ -11,13 +11,16 @@ module wb_j1_cpu
 	
 	input  wire	[`DataWidth]		dat_i			,
 	input  wire						ack_i			,
-	input  wire	[`DataWidth]		inst_i			,
 	output wire	[`CpuNumWidth]		cpu_num			,
 	output reg	[`DataWidth]		adr_o			,
 	output reg	[`DataWidth]		dat_o			,
 	output reg						we_o			,
 	output reg						cyc_o			,
-	output wire	[`PcWidth]			pc_o			,
+	
+	input  wire	[`DataWidth]		inst_i			,
+	input  wire						inst_ack_i		,
+	output wire	 					inst_cyc_o		,
+	output wire	[`PcWidth]			inst_pc_o		,
 	
 	input  wire	[`UartDataWidth]	cpu_uart_dat_i	,
 	output reg	[`CpuNumWidth]		cpu_uart_num	,
@@ -28,17 +31,14 @@ module wb_j1_cpu
 );
 
 	assign cpu_num = num;
-	/* always @(posedge clk)
-	begin
-		cpu_num <= 0;
-	end */
 	
-	assign pc_o = cpu_state ? _pc : pc;
-	
-	reg cpu_state;	// 0访存 1执行
-	// reg ack;
-	// reg [`DataWidth] data_input;
-	reg [`DataWidth] insn;			//指令
+	wire cpu_state;	// 0访存 1执行
+	assign cpu_state = data_state & insn_state;
+	reg data_state, insn_state;	 // 0访存 1执行
+	reg is_fetch_inst;
+
+	reg [`DataWidth] insn,_insn;			//指令
+	// wire [`DataWidth] _insn = insn_state ? inst_i : 32'h60000000;
 	
 	wire [`DataWidth] immediate = { 1'b0, insn[`ImmediateBit] };	
 	
@@ -63,18 +63,14 @@ module wb_j1_cpu
 	reg [`DataWidth] rstack[0:31];
 	always @(posedge clk)		//在系统时钟上升沿 如果 使能= 1 把数据写入到堆栈
 	begin
-		if(cpu_state)
-		begin
-			if (_dstkW)
-				dstack[_dsp] = st0;	// 在执行st0<=_st0时此处st0仍是上个时钟的值并不是_st0
-			if (_rstkW)
-				rstack[_rsp] = _rstkD;
-		end 
-
+		if (_dstkW)
+			dstack[_dsp] = st0;	// 在执行st0<=_st0时此处st0仍是上个时钟的值并不是_st0
+		if (_rstkW)
+			rstack[_rsp] = _rstkD;
 	end
-	(* KEEP="TRUE" *)wire [`DataWidth] st1;
-	assign st1 = dstack[dsp];	// 次栈顶 
+	wire [`DataWidth] st1 = dstack[dsp];	// 次栈顶 
 	wire [`DataWidth] rst0 = rstack[rsp];	// 返回堆栈 栈顶元素
+
 
 
 /*******************************取指 访存*******************************/
@@ -85,29 +81,29 @@ module wb_j1_cpu
 		if(rst)
 		begin
 			insn = 0;
-			cpu_state = 1;
+			data_state = 1;
 		end 
 		else begin
-			if(!ack_i)
+			if(!ack_i & (is_fetch_inst ~^ inst_ack_i))
 				if((inst_i[`InstTypeBit] == 3'b011) && ((inst_i[`AluTypeBit] == 4'hc) || inst_i[`NTo_T_Bit]))
 				begin
 					if(st0[`UartAddrBit] != 4'b1111)
 						begin
-							cpu_state = 0;
+							data_state = 0;
 						end 
 					else
 					begin
-						cpu_state = 1;
+						data_state = 1;
 					end 
 				end else
 				begin
-					cpu_state = 1;
+					data_state = 1;
 				end 
 			else
 			begin
-				cpu_state = 1;
+				data_state = 1;
 			end 
-			insn = inst_i;
+			insn = (is_fetch_inst ~^ inst_ack_i) ? inst_i : _insn;
 		end 
 	end
 
@@ -168,7 +164,7 @@ module wb_j1_cpu
 	wire is_from_mem = (is_alu & (insn[`AluTypeBit] == 4'hc)); // @
 	wire is_to_mem = (is_alu & insn[`NTo_T_Bit]);	// !
 
-	assign _dstkW = is_lit | (is_alu & insn[`TToNBit]);
+	assign _dstkW = (is_lit | (is_alu & insn[`TToNBit])) & cpu_state;
 
 	wire [1:0] dd = insn[`DataStackDeltaBit];	// D stack delta	栈顶指针移动
 	wire [1:0] rd = insn[`ReturnStackDeltaBit];	// R stack delta	栈顶指针移动
@@ -239,7 +235,7 @@ module wb_j1_cpu
 			dsp <= 0;
 			st0 <= 0;
 			rsp <= 0;
-		end else if(cpu_state)
+		end else
 		begin
 			dsp <= _dsp;
 			pc <= _pc;
@@ -247,13 +243,7 @@ module wb_j1_cpu
 			rsp <= _rsp;
 		end
 	end
-	
-	/* generate
-		if(is_master)
-		begin
-			
-		end 
-	endgenerate */
+
 	
 	always @(posedge clk)
 	begin
@@ -264,8 +254,8 @@ module wb_j1_cpu
 	end 
 	
 	
-	assign cpu_uart_rd_o = is_from_mem & (st0[`UartAddrBit] == 4'b1111);
-	assign cpu_uart_wr_o = is_to_mem  & (st0[`UartAddrBit] == 4'b1111);
+	assign cpu_uart_rd_o = is_from_mem & (st0[`UartAddrBit] == 4'b1111) & cpu_state;
+	assign cpu_uart_wr_o = is_to_mem  & (st0[`UartAddrBit] == 4'b1111) & cpu_state;
 	assign cpu_uart_adr_o = st0[0];
 	assign cpu_uart_dat_o = st1[7:0];
 
@@ -278,10 +268,10 @@ module wb_j1_cpu
 			adr_o = 0;
 			dat_o = 0;
 			we_o = 0;
-		end else if(!cpu_state)
+		end else if(!data_state)
 		begin
 			cyc_o = 1'b1;
-			adr_o = st0;
+			adr_o = st0[`DataTransAddrBit];
 			dat_o = st1;
 			we_o = inst_i[`NTo_T_Bit];
 		end else
@@ -293,4 +283,37 @@ module wb_j1_cpu
 		end 
 	end
 
+	always @(*)
+	begin
+		if(!inst_ack_i)
+			if(is_fetch_inst)
+			begin
+				insn_state = 0;
+			end else
+			begin
+				insn_state = 1;
+			end 
+		else
+		begin
+			insn_state = 1;		
+		end 
+	end
+
+	assign inst_pc_o = data_state ? _pc : pc;
+	assign inst_cyc_o = insn_state ? 0 : 1;
+	
+	always @(posedge clk)
+	begin
+		if((inst_pc_o[13:12] != 0) & data_state)
+		begin
+			is_fetch_inst <= 1;
+			_insn <= insn;
+		end 
+		else
+		begin
+			is_fetch_inst <= 0;
+			_insn <= insn;
+		end 
+	end 
+	
 endmodule // j1

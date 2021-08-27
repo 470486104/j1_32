@@ -11,28 +11,33 @@ module cpu_top(
 	output wire [`UartDataWidth]	uart_din 
 );
 
-	wire [`DataWidth]	wb_dat_i	;
-	wire 				wb_ack		;
-	wire [`PcWidth]		wb_pc		;
-	wire [`DataWidth]	wb_adr		;
-	wire [`DataWidth]	wb_dat_o	;
-	wire 				wb_we 		;
-	wire 				wb_stb		;
-	wire 				wb_cyc		;
-	wire [`DataWidth]	wb_inst		;
-
+	wire [`DataWidth]	wb_dat_i		;
+	wire 				wb_dat_ack		;
+	wire [`DataWidth]	wb_dat_adr		;
+	wire [`DataWidth]	wb_dat_o		;
+	wire 				wb_dat_we 		;
+	wire 				wb_dat_stb		;
+	wire 				wb_dat_cyc		;
+	
+	wire 				wb_inst_cyc		;
+	wire 				wb_inst_stb		;
+	wire [`PcWidth]		wb_inst_pc		;
+	wire [`DataWidth]	wb_inst_o		;
+	wire 				wb_inst_ack		;
 
 	wire [`CpuNumWidth]	cpu_uart_num	;
 	
 	wire [`CpuNumWidth]		cpu0_num		;
 	wire [`DataWidth]		cpu0_dat_i 		;
 	wire 					cpu0_ack_i 		;
-	wire [`DataWidth]		cpu0_inst_i		;
 	wire [`DataWidth]		cpu0_adr_o 		;
 	wire [`DataWidth]		cpu0_dat_o 		;
 	wire 					cpu0_we_o  		;
 	wire 					cpu0_cyc_o 		;
-	wire [`PcWidth]			cpu0_pc_o  		;
+	wire [`DataWidth]		cpu0_inst_i		;
+	wire					cpu0_inst_ack_i	;
+	wire					cpu0_inst_cyc_o	;
+	wire [`PcWidth]			cpu0_inst_pc_o	;	
 	wire [`UartDataWidth]	cpu0_uart_dat_o	;
 	wire					cpu0_uart_rd_o	;
 	wire					cpu0_uart_wr_o	;
@@ -42,12 +47,14 @@ module cpu_top(
 	wire [`CpuNumWidth]		cpu1_num		;
 	wire [`DataWidth]		cpu1_dat_i 		;
 	wire 					cpu1_ack_i 		;
-	wire [`DataWidth]		cpu1_inst_i		;
 	wire [`DataWidth]		cpu1_adr_o 		;
 	wire [`DataWidth]		cpu1_dat_o 		;
 	wire 					cpu1_we_o  		;
 	wire 					cpu1_cyc_o 		;
-	wire [`PcWidth]			cpu1_pc_o  		;
+	wire [`DataWidth]		cpu1_inst_i		;
+	wire					cpu1_inst_ack_i	;
+	wire					cpu1_inst_cyc_o	;
+	wire [`PcWidth]			cpu1_inst_pc_o	;	
 	wire [`UartDataWidth]	cpu1_uart_dat_o	;
 	wire					cpu1_uart_rd_o	;
 	wire					cpu1_uart_wr_o	;
@@ -57,39 +64,56 @@ module cpu_top(
 	wire [`CpuNumWidth]		cpu2_num		;
 	wire [`DataWidth]		cpu2_dat_i 		;
 	wire 					cpu2_ack_i 		;
-	wire [`DataWidth]		cpu2_inst_i		;
 	wire [`DataWidth]		cpu2_adr_o 		;
 	wire [`DataWidth]		cpu2_dat_o 		;
 	wire 					cpu2_we_o  		;
 	wire 					cpu2_cyc_o 		;
-	wire [`PcWidth]			cpu2_pc_o  		;
+	wire [`DataWidth]		cpu2_inst_i		;
+	wire					cpu2_inst_ack_i	;
+	wire					cpu2_inst_cyc_o	;
+	wire [`PcWidth]			cpu2_inst_pc_o	;	
 	wire [`UartDataWidth]	cpu2_uart_dat_o	;
 	wire					cpu2_uart_rd_o	;
 	wire					cpu2_uart_wr_o	;
 	wire 					cpu2_uart_adr_o	;
 	wire [`UartDataWidth]	cpu2_uart_dat_i	;
 	
+	wire [`PcWidth]		cpu0_pc	   ;
+	wire [`DataWidth]	cpu0_inst  ;
+	
+	wire [`PcWidth]		cpu1_pc    ;
+	wire [`DataWidth]	cpu1_inst  ;
+	
+	wire [`PcWidth]		cpu2_pc    ;
+	wire [`DataWidth]	cpu2_inst  ;
+	
 	
 	wb_ram ram(
 		.clk	(clk),
 		.rst	(rst),
 		
-		.dat_i  (wb_dat_i	),
-		.cyc_i  (wb_cyc		),
-		.stb_i  (wb_stb		),
-		.adr_i  (wb_adr		),
-		.we_i   (wb_we		),
-		.ack_o  (wb_ack		),
-		.dat_o  (wb_dat_o	),
+		.dat_i  (wb_dat_i		),
+		.cyc_i  (wb_dat_cyc		),
+		.stb_i  (wb_dat_stb		),
+		.adr_i  (wb_dat_adr		),
+		.we_i   (wb_dat_we		),
+		.ack_o  (wb_dat_ack		),
+		.dat_o  (wb_dat_o		),
 		
-		.cpu0_pc_i		(cpu0_pc_o		),
-		.cpu0_inst_o 	(cpu0_inst_i	),
+		.inst_cyc_i	(wb_inst_cyc),
+		.inst_stb_i	(wb_inst_stb),
+		.inst_pc	(wb_inst_pc	),	
+		.inst_o		(wb_inst_o	),
+		.inst_ack_o	(wb_inst_ack),
 		
-		.cpu1_pc_i		(cpu1_pc_o		),
-		.cpu1_inst_o 	(cpu1_inst_i	),
-		
-		.cpu2_pc_i		(cpu2_pc_o		),
-		.cpu2_inst_o 	(cpu2_inst_i	)
+		.cpu0_pc_i		(cpu0_pc	),
+		.cpu0_inst_o 	(cpu0_inst  ),
+		                 
+		.cpu1_pc_i		(cpu1_pc    ),
+		.cpu1_inst_o 	(cpu1_inst  ),
+		                 
+		.cpu2_pc_i		(cpu2_pc    ),
+		.cpu2_inst_o 	(cpu2_inst  )
 	); 
 	
 	uart_control uart_io(
@@ -130,13 +154,19 @@ module cpu_top(
 		.clk		(clk),
 		.rst		(rst),
 		
-		.wb_ack	    (wb_ack		),
-		.wb_dat_o   (wb_dat_o	),
-		.wb_cyc	    (wb_cyc		),
-		.wb_dat_i   (wb_dat_i	),
-		.wb_adr	    (wb_adr		),
-		.wb_we 	    (wb_we		),
-		.wb_stb	    (wb_stb		),
+		.wb_ack	    (wb_dat_ack		),
+		.wb_dat_o   (wb_dat_o		),
+		.wb_cyc	    (wb_dat_cyc		),
+		.wb_dat_i   (wb_dat_i		),
+		.wb_adr	    (wb_dat_adr		),
+		.wb_we 	    (wb_dat_we		),
+		.wb_stb	    (wb_dat_stb		),
+		
+		.wb_inst_o	(wb_inst_o	),
+		.wb_inst_ack(wb_inst_ack),	
+		.wb_inst_cyc(wb_inst_cyc),	
+		.wb_inst_stb(wb_inst_stb),	
+		.wb_inst_pc	(wb_inst_pc	),
 		
 		.cpu0_num   (cpu0_num   ),
 		.cpu0_adr_o (cpu0_adr_o ),
@@ -146,6 +176,11 @@ module cpu_top(
 		.cpu0_dat_i (cpu0_dat_i ),
 		.cpu0_ack_i (cpu0_ack_i ),
 		
+		.cpu0_inst_cyc_o(cpu0_inst_cyc_o),	
+		.cpu0_inst_pc_o	(cpu0_inst_pc_o	),
+		.cpu0_inst_i	(cpu0_inst_i	),	
+		.cpu0_inst_ack_i(cpu0_inst_ack_i),	
+		
 		.cpu1_num   (cpu1_num   ),
 		.cpu1_adr_o (cpu1_adr_o ),
 		.cpu1_dat_o (cpu1_dat_o ),
@@ -154,13 +189,32 @@ module cpu_top(
 		.cpu1_dat_i (cpu1_dat_i ),
 		.cpu1_ack_i (cpu1_ack_i ),
 		
+		.cpu1_inst_cyc_o(cpu1_inst_cyc_o),	
+		.cpu1_inst_pc_o	(cpu1_inst_pc_o	),
+		.cpu1_inst_i	(cpu1_inst_i	),	
+		.cpu1_inst_ack_i(cpu1_inst_ack_i),	
+		
 		.cpu2_num   (cpu2_num   ),
 		.cpu2_adr_o (cpu2_adr_o ),
 		.cpu2_dat_o (cpu2_dat_o ),
 		.cpu2_we_o  (cpu2_we_o  ),
 		.cpu2_cyc_o (cpu2_cyc_o ),
 		.cpu2_dat_i (cpu2_dat_i ),
-		.cpu2_ack_i (cpu2_ack_i )
+		.cpu2_ack_i (cpu2_ack_i ),
+		
+		.cpu2_inst_cyc_o(cpu2_inst_cyc_o),	
+		.cpu2_inst_pc_o	(cpu2_inst_pc_o	),
+		.cpu2_inst_i	(cpu2_inst_i	),	
+		.cpu2_inst_ack_i(cpu2_inst_ack_i),
+		
+		.cpu0_inst	(cpu0_inst	),
+		.cpu0_pc	(cpu0_pc	),		
+		             
+		.cpu1_inst	(cpu1_inst	),
+		.cpu1_pc	(cpu1_pc	),		
+	                 
+		.cpu2_inst	(cpu2_inst	),
+		.cpu2_pc	(cpu2_pc	)		
 	);
 	
 	wb_j1_cpu 
@@ -172,13 +226,16 @@ module cpu_top(
 		
 		.dat_i	(cpu0_dat_i ),
 		.ack_i	(cpu0_ack_i ),
-		.inst_i	(cpu0_inst_i),
 		.cpu_num(cpu0_num	),
 		.adr_o	(cpu0_adr_o ),
 		.dat_o	(cpu0_dat_o ),
 		.we_o	(cpu0_we_o  ),
 		.cyc_o	(cpu0_cyc_o ),
-		.pc_o	(cpu0_pc_o  ),
+		
+		.inst_i		(cpu0_inst_i	),
+		.inst_ack_i	(cpu0_inst_ack_i),
+		.inst_cyc_o	(cpu0_inst_cyc_o),
+		.inst_pc_o	(cpu0_inst_pc_o	),
 		
 		.cpu_uart_dat_i	(cpu0_uart_dat_i),
 		.cpu_uart_num	(cpu_uart_num	),
@@ -195,13 +252,16 @@ module cpu_top(
 		.rst	(rst)		,
 		.dat_i	(cpu1_dat_i ),
 		.ack_i	(cpu1_ack_i ),
-		.inst_i	(cpu1_inst_i),
 		.cpu_num(cpu1_num	),
 		.adr_o	(cpu1_adr_o ),
 		.dat_o	(cpu1_dat_o ),
 		.we_o	(cpu1_we_o  ),
 		.cyc_o	(cpu1_cyc_o ),
-		.pc_o	(cpu1_pc_o  ),
+		
+		.inst_i		(cpu1_inst_i	),
+		.inst_ack_i	(cpu1_inst_ack_i),
+		.inst_cyc_o	(cpu1_inst_cyc_o),
+		.inst_pc_o	(cpu1_inst_pc_o	),	
 		
 		.cpu_uart_dat_i	(cpu1_uart_dat_i),
 		.cpu_uart_dat_o	(cpu1_uart_dat_o),
@@ -217,18 +277,21 @@ module cpu_top(
 		.rst	(rst)		,
 		.dat_i	(cpu2_dat_i ),
 		.ack_i	(cpu2_ack_i ),
-		.inst_i	(cpu2_inst_i),
 		.cpu_num(cpu2_num	),
 		.adr_o	(cpu2_adr_o ),
 		.dat_o	(cpu2_dat_o ),
 		.we_o	(cpu2_we_o  ),
 		.cyc_o	(cpu2_cyc_o ),
-		.pc_o	(cpu2_pc_o  ),
+		
+		.inst_i		(cpu2_inst_i	),
+		.inst_ack_i	(cpu2_inst_ack_i),
+		.inst_cyc_o	(cpu2_inst_cyc_o),
+		.inst_pc_o	(cpu2_inst_pc_o	),
 		
 		.cpu_uart_dat_i	(cpu2_uart_dat_i),
 		.cpu_uart_dat_o	(cpu2_uart_dat_o),
 		.cpu_uart_rd_o	(cpu2_uart_rd_o	),
 		.cpu_uart_wr_o	(cpu2_uart_wr_o	),
 		.cpu_uart_adr_o	(cpu2_uart_adr_o)
-	); 
+	);  
 endmodule

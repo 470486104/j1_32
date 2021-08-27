@@ -108,28 +108,30 @@ a: literal \ ( n -- ) 若n>8000h 则在tflash[tdp]处存放值8000h的取反值�
 variable tlast \ tflash中最后一个词的指针
 variable tuser
 
-0002 constant =ver
-0003 constant =ext
+0002 constant =ver	\ 版本号
+0003 constant =ext	\ 版次号
 0040 constant =comp \ 与某词长度or运算可使该词为只编译词不搜索，即词长度的次高位置为1
 0080 constant =imed \ 与某词长度or运算可使该词为立即词，即词长度的最高位置为1
-7f7f7f1f constant =mask
-0004 constant =cell
+7f7f7f1f constant =mask \ 取出带有字符串长度的4个字节 低位为字符长度
+0004 constant =cell	\ 系统基础单元所占字节数
 0010 constant =base \ 系统初始进制 16进制
-0008 constant =bksp
+0008 constant =bksp	\ 退格符的ascii码
 000a constant =lf	\ 换行符的ascii码
 000d constant =cr	\ 回车符的ascii码
+\ 系统以字节为单位计算，cpu以字长为单位（32位系统为4个字长）
+c000 constant =em	\ 48KB 存储空间 rom: 0-fff ; ram: 1000-2fff 
+0000 constant =cold \ 冷启动位置
 
-8000 constant =em
-0000 constant =cold
+ 8 constant =vocs \ context列表词汇数
+100 constant =us	\ 128*4B 的空间
 
- 8 constant =vocs
-100 constant =us
-
-=em 200 - constant =tib \ 7e00  
-=tib =us - constant =up \ 7d00 
+=em 200 - constant =tib \ be00  128*4B的键盘输入缓冲区  内存地址2f80
+4000 constant =up 		\ 4000  内存地址1000
 
 =cold =us + constant =pick \ 0100
 =pick 200 + constant =code \ 0300
+
+: newforthdp =up =us + ;
 
 : thead ( "name" -- ) \ 以空格为结尾 存放字符串 一般为词头名称 第一个单元存放长度,,
 	t32align
@@ -384,7 +386,7 @@ t: 1+ 1 literal + t;
 t: sp@ dsp ff literal and t;
 t: execute ( ca -- ) >r t;
 t: bye ( -- ) f0000002 literal ! t;
-\ c@ c! 在468行重写
+\ c@ c! 需要乘法 故写在472行重写
 \ t: c@ ( b -- c )   dup @ swap 1 literal and if    8 literal rshift else ff literal and then exit t;
 \ t: c! ( c b -- )   swap ff literal and dup 8 literal lshift or swap    tuck dup @ swap 1 literal and 0 literal = ff literal xor    >r over xor r> and xor swap ! t;
 t: um+ ( w1 w2 -- w1+w2 1or0 )  \ 1or0 表示w1和w2中是否有负数 有为1 反之0
@@ -959,14 +961,14 @@ t: hi ( -- )
 t: cold ( -- )
    =uzero literal =up literal =udiff literal cmove
    preset forth-wordlist dup context ! dup current 2! overt
-   4000 literal cell+ dup cell- @ $eval
+   8000 literal cell+ dup cell- @ $eval
    'boot @execute
    quit
    cold t;
 
 target.1 -order set-current
 
-there 			[u] dp t32!
+newforthdp		[u] dp t32!
 [last] 			[u] last t32!
 [t] ?rx			[u] '?key t32!
 [t] tx!			[u] 'emit t32!
