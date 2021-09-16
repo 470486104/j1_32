@@ -4,9 +4,10 @@ module uart_control(
 	input rst,
 	
 	input  wire [`UartDataWidth]	uart_dout		,
+	input  wire [`UartDataWidth]	uart_dout1		,
 	output wire						uart_rd			,
 	output wire						uart_wr			,
-	output wire						uart_addr		,
+	output wire	[1:0]				uart_addr		,
 	output wire [`UartDataWidth]	uart_din		,
 	
 	input  wire [`CpuNumWidth]		cpu_uart_num	,
@@ -48,25 +49,30 @@ module uart_control(
 		endcase
 	end  
 	
-	assign uart_rd	=	(cpu0_uart_rd_o & cpu_sel[0]) | 
+	/* assign uart_rd	=	(cpu0_uart_rd_o & cpu_sel[0]) | 
 						(cpu1_uart_rd_o & cpu_sel[1]) | 
-						(cpu2_uart_rd_o & cpu_sel[2]);
+						(cpu2_uart_rd_o & cpu_sel[2]);  */
+						
+	assign uart_rd	=	cpu0_uart_rd_o;
 						
 	assign uart_wr	=	(cpu0_uart_wr_o & cpu_sel[0]) | 
 						(cpu1_uart_wr_o & cpu_sel[1]) | 
 						(cpu2_uart_wr_o & cpu_sel[2]);
 						
-	assign uart_addr =	(cpu0_uart_adr_o & cpu_sel[0]) | 
-						(cpu1_uart_adr_o & cpu_sel[1]) | 
-						(cpu2_uart_adr_o & cpu_sel[2]);
+	assign uart_addr =	{cpu0_uart_adr_o, 
+							(cpu0_uart_adr_o & cpu_sel[0]) | 
+							(cpu1_uart_adr_o & cpu_sel[1]) | 
+							(cpu2_uart_adr_o & cpu_sel[2])};
 						
 	assign uart_din  =	(cpu0_uart_dat_o & {`UartDataLengh{cpu_sel[0]}}) | 
 						(cpu1_uart_dat_o & {`UartDataLengh{cpu_sel[1]}}) | 
 						(cpu2_uart_dat_o & {`UartDataLengh{cpu_sel[2]}});
 
 	
-	assign cpu0_uart_dat_i = uart_dout & {`UartDataLengh{cpu_sel[0]}};
-	assign cpu1_uart_dat_i = uart_dout & {`UartDataLengh{cpu_sel[1]}};
-	assign cpu2_uart_dat_i = uart_dout & {`UartDataLengh{cpu_sel[2]}};
+	assign cpu0_uart_dat_i = cpu_sel[0] ? (uart_dout1 & {`UartDataLengh{cpu_sel[0]}}) : uart_dout;
+	
+	// assign cpu0_uart_dat_i = uart_dout1 & {`UartDataLengh{cpu_sel[0]}};
+	assign cpu1_uart_dat_i = uart_dout1 & {`UartDataLengh{cpu_sel[1]}};
+	assign cpu2_uart_dat_i = uart_dout1 & {`UartDataLengh{cpu_sel[2]}};
 	
 endmodule

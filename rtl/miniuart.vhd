@@ -45,9 +45,10 @@ entity MINIUART2 is
 		tx:			out STD_LOGIC;
 		io_rd:		in  STD_LOGIC;
 		io_wr:		in  STD_LOGIC;
-		io_addr:	in  STD_LOGIC;
+		io_addr:	in  STD_LOGIC_VECTOR (1 downto 0);
 		io_din: 	in  STD_LOGIC_VECTOR (7 downto 0);
-		io_dout:	out STD_LOGIC_VECTOR (7 downto 0));
+		io_dout:	out STD_LOGIC_VECTOR (7 downto 0);
+		io_dout1:	out STD_LOGIC_VECTOR (7 downto 0));
 end MINIUART2;
 
 -- Architecture for UART for synthesis
@@ -110,8 +111,8 @@ architecture Behaviour of MINIUART2 is
      Uart_RxUnit : RxUnit port map (clk, rst, EnabRX, ReadA, rx, RxAv, RxData);
 	 
 	 -- status register
-	 SReg(0) <= RxAv; 
-	 SReg(1) <= TxBusy;
+	 SReg(0) <= RxAv;  -- 1 字符接收完成 ； 0 未接收完成
+	 SReg(1) <= TxBusy; -- 1 正在传送 ； 0 准备好窜送下一个字符
 	 SReg(7 downto 2) <= (others => '0'); -- the rest is silence
   
      process (clk, rst, io_addr, io_wr, io_din)
@@ -119,7 +120,7 @@ architecture Behaviour of MINIUART2 is
 		 if Rising_Edge(clk) then
             if rst='1' then
 			    LoadA <= '0';
-		    elsif io_wr='1' and io_addr='0' then -- write byte to tx
+		    elsif io_wr='1' and io_addr(0)='0' then -- write byte to tx
 			   TxData <= io_din;
 		       LoadA <= '1';
 		       
@@ -134,14 +135,15 @@ architecture Behaviour of MINIUART2 is
 		   if Rising_Edge(clk) then
 			   if rst='1' then
 				   ReadA <= '0';
-			   elsif io_rd='1' and io_addr='0' then
+			   elsif io_rd='1' and io_addr(1)='0' then
 				   ReadA <= '1';
 			   else
 				   ReadA <= '0';
 			   end if;
 		   end if;
       end process;
-      io_dout(7 downto 0) <= RxData when io_addr='0' else SReg;
+      io_dout(7 downto 0) <= RxData when io_addr(1)='0' else SReg;
+      io_dout1(7 downto 0) <= RxData when io_addr(0)='0' else SReg;
 	  -- io_dout(15 downto 8) <= (others => '0');
  
 end Behaviour;

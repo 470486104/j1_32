@@ -31,3 +31,4 @@
 `define CpuNumWidth 		1:0		// cpu核心数位宽
 `define CpuNum		 		3		// cpu核心数
 `define CpuSelWidth			2:0		// cpu列表宽
+

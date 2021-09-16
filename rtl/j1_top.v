@@ -3,32 +3,35 @@
 module j1_top(
 	input  		clk_in	,
 	input		rst_in	,
-	input		key2	,
+	// input		key2	,
 	input  		rx		,
 	output 		tx
 );
 
 	wire clk;
 	wire rst;
+	wire rst_in,key2;
 	
 	reg[`CpuNumWidth] u_n;
 	
 	wire [`UartDataWidth]	uart_dout;
+	wire [`UartDataWidth]	uart_dout1;
 	wire					uart_rd	 ;
 	wire					uart_wr	 ;
-	wire					uart_addr;
+	wire [1:0]				uart_addr;
 	wire [`UartDataWidth]	uart_din ;
 	
 	// 时钟
-	clock50 ck(.clk_in(clk_in), .clk_50(clk));
+	clock50_100 ck(.clk_in(clk_in), .clk_50(clk));
 	
 	// j1 多核cpu
 	cpu_top cpu(
 		.clk(clk),
 		.rst(rst),
-		.key2(u_n),
+		// .key2(u_n),
 		
 		.uart_dout(uart_dout),
+		.uart_dout1(uart_dout1),
 	    .uart_rd  (uart_rd	), 
 	    .uart_wr  (uart_wr	), 
 	    .uart_addr(uart_addr),
@@ -46,7 +49,8 @@ module j1_top(
 		.io_wr	  (uart_wr),
 		.io_addr  (uart_addr),
 		.io_din   (uart_din),
-		.io_dout  (uart_dout)
+		.io_dout  (uart_dout),
+		.io_dout1  (uart_dout1)
 	); 
 	
 
@@ -54,14 +58,14 @@ module j1_top(
 	reg[4-1:0] count = 4'b1111;
 	always @(posedge clk)
 	begin
-		if(rst_in)
+		if(!rst_in)
 			count <= 4'b1111;
 		else if(count > 1'b0)
 			count <= count - 1'b1;
 	end
 	assign rst = count > 0 ? 1'b1 : 1'b0 ;
 	
-
+/* 
 	// 按键消抖
 	parameter DURATION = 50_000_000;                           //延时10ms	
 	reg [31:0] cnt; 
@@ -74,9 +78,9 @@ module j1_top(
 		if(rst)
 		begin
 			ken_enable <= 0;
-		end else if(key2 & !ken_enable)
+		end else if(!key2 & !ken_enable)
 		begin
-			ken_enable <= key2;
+			ken_enable <= 1;
 		end else if(cnt == DURATION)
 			ken_enable <= 0;
 	end
@@ -102,5 +106,5 @@ module j1_top(
 		else if(cnt == 25)
 			u_n <= u_n + 1;
 	end
-	
+	 */
 endmodule

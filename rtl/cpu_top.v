@@ -2,12 +2,13 @@
 module cpu_top(
 	input clk		,
 	input rst		,
-	input wire[1:0] key2		,
+	// input wire[1:0] key2		,
 	
 	input  wire [`UartDataWidth]	uart_dout,
+	input  wire [`UartDataWidth]	uart_dout1,
 	output wire						uart_rd	 ,
 	output wire						uart_wr	 ,
-	output wire						uart_addr,
+	output wire	[1:0]				uart_addr,
 	output wire [`UartDataWidth]	uart_din 
 );
 
@@ -24,8 +25,13 @@ module cpu_top(
 	wire [`PcWidth]		wb_inst_pc		;
 	wire [`DataWidth]	wb_inst_o		;
 	wire 				wb_inst_ack		;
+	
+	wire [`CpuSelWidth] core_state      ;
 
 	wire [`CpuNumWidth]	cpu_uart_num	;
+	wire 				cpu0_control	;
+	wire [`CpuNumWidth]	start_cpu_num   ;
+	wire [`PcWidth]		cpu_start_adr   ;
 	
 	wire [`CpuNumWidth]		cpu0_num		;
 	wire [`DataWidth]		cpu0_dat_i 		;
@@ -44,6 +50,9 @@ module cpu_top(
 	wire 					cpu0_uart_adr_o	;
 	wire [`UartDataWidth]	cpu0_uart_dat_i	;
 	
+	wire					cpu1_end		;
+	wire					cpu1_start		;
+	wire [`PcWidth]			cpu1_start_adr	;
 	wire [`CpuNumWidth]		cpu1_num		;
 	wire [`DataWidth]		cpu1_dat_i 		;
 	wire 					cpu1_ack_i 		;
@@ -61,6 +70,9 @@ module cpu_top(
 	wire 					cpu1_uart_adr_o	;
 	wire [`UartDataWidth]	cpu1_uart_dat_i	;
 	
+	wire					cpu2_end		;
+	wire					cpu2_start		;
+	wire [`PcWidth]			cpu2_start_adr	;
 	wire [`CpuNumWidth]		cpu2_num		;
 	wire [`DataWidth]		cpu2_dat_i 		;
 	wire 					cpu2_ack_i 		;
@@ -121,6 +133,7 @@ module cpu_top(
 		.rst	(rst),
 		
 		.uart_dout		(uart_dout		),
+		.uart_dout1		(uart_dout1		),
 	    .uart_rd		(uart_rd		),
 	    .uart_wr		(uart_wr		),
 	    .uart_addr		(uart_addr		),
@@ -217,12 +230,29 @@ module cpu_top(
 		.cpu2_pc	(cpu2_pc	)		
 	);
 	
-	wb_j1_cpu 
+	core_control core_sel(
+		.clk		(clk),
+		.rst		(rst),
+		
+		.cpu0_control	(cpu0_control	),
+		.start_cpu_num  (start_cpu_num  ), 
+		.cpu_start_adr  (cpu_start_adr  ), 
+		.cpu1_end		(cpu1_end		),
+		.cpu2_end		(cpu2_end		),
+		.cpu1_start		(cpu1_start		),
+		.cpu1_start_adr	(cpu1_start_adr	),
+		.cpu2_start		(cpu2_start		),
+		.cpu2_start_adr	(cpu2_start_adr	),
+		.core_state     (core_state     )
+	);
+	
+	
+	wb_j1_cpu_master 
 		#(.is_master(1), .num(0))
 	cpu0(
 		.clk	(clk)		,
 		.rst	(rst)		,
-		.key2	(key2)		,
+		// .key2	(key2)		,
 		
 		.dat_i	(cpu0_dat_i ),
 		.ack_i	(cpu0_ack_i ),
@@ -242,10 +272,15 @@ module cpu_top(
 		.cpu_uart_dat_o	(cpu0_uart_dat_o),
 		.cpu_uart_rd_o	(cpu0_uart_rd_o	),
 		.cpu_uart_wr_o	(cpu0_uart_wr_o	),
-		.cpu_uart_adr_o	(cpu0_uart_adr_o)
+		.cpu_uart_adr_o	(cpu0_uart_adr_o),
+		
+		.core_state		(core_state		),
+		.cpu0_control	(cpu0_control	),
+		.start_cpu_num  (start_cpu_num	), 
+		.cpu_start_adr  (cpu_start_adr	) 
 	); 
 	
-	wb_j1_cpu 
+	wb_j1_cpu_slave 
 		#(.is_master(0), .num(1))
 	cpu1(
 		.clk	(clk)		,
@@ -267,10 +302,14 @@ module cpu_top(
 		.cpu_uart_dat_o	(cpu1_uart_dat_o),
 		.cpu_uart_rd_o	(cpu1_uart_rd_o	),
 		.cpu_uart_wr_o	(cpu1_uart_wr_o	),
-		.cpu_uart_adr_o	(cpu1_uart_adr_o)
+		.cpu_uart_adr_o	(cpu1_uart_adr_o),
+		
+		.cpu_start		(cpu1_start		),
+		.cpu_start_adr	(cpu1_start_adr	),
+		.cpu_end        (cpu1_end		)
 	); 
 	
-	wb_j1_cpu 
+	wb_j1_cpu_slave 
 		#(.is_master(0), .num(2))
 	cpu2(
 		.clk	(clk)		,
@@ -292,6 +331,10 @@ module cpu_top(
 		.cpu_uart_dat_o	(cpu2_uart_dat_o),
 		.cpu_uart_rd_o	(cpu2_uart_rd_o	),
 		.cpu_uart_wr_o	(cpu2_uart_wr_o	),
-		.cpu_uart_adr_o	(cpu2_uart_adr_o)
+		.cpu_uart_adr_o	(cpu2_uart_adr_o),
+		
+		.cpu_start		(cpu2_start		),
+		.cpu_start_adr	(cpu2_start_adr	),
+		.cpu_end        (cpu2_end		)
 	);  
 endmodule

@@ -169,8 +169,8 @@ module wb_arbiter(
 	
 	
 
-	(* KEEP="TRUE" *)reg cpu_sel_data[`CpuSelWidth];
-	(* KEEP="TRUE" *)reg cpu_sel_inst[`CpuSelWidth];
+	reg cpu_sel_data[`CpuSelWidth];
+	reg cpu_sel_inst[`CpuSelWidth];
 	
 	always @(new_cpu_data)
 	begin

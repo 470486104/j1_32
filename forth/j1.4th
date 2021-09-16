@@ -78,6 +78,10 @@ a: n<<t 0d00 ;
 a: dsp  0e00 ;
 a: nu<t 0f00 ;
 
+a: core_s		2000 or ; 
+a: p_core		4000 or ;
+a: core_o	 	6000 or ;
+
 a: t->n		0080 or ;
 a: t->r		0040 or ;
 a: n->[t]	0020 or ;
@@ -104,6 +108,8 @@ a: literal \ ( n -- ) 若n>8000h 则在tflash[tdp]处存放值8000h的取反值�
 	else
 		80000000 or t32,
 	then ;
+
+
 
 variable tlast \ tflash中最后一个词的指针
 variable tuser
@@ -133,6 +139,7 @@ c000 constant =em	\ 48KB 存储空间 rom: 0-fff ; ram: 1000-2fff
 
 : newforthdp =up =us + ;
 
+
 : thead ( "name" -- ) \ 以空格为结尾 存放字符串 一般为词头名称 第一个单元存放长度,,
 	t32align
 	tlast @ t32, there tlast !
@@ -155,9 +162,9 @@ c000 constant =em	\ 48KB 存储空间 rom: 0-fff ; ram: 1000-2fff
 	 r> set-current 947947 t32align there , does> @ [a] call ; \ t: noop noop t;
 : exit \ 若是跳转指令call 则将地址取出并重新存入当前指令的位置，否则判断是否是alu并且参数栈顶不传数据到返回栈顶，是则在该指令中添加返回位即R->PC否则直接写返回指令到tdp-2位置
   	call? if
-	
   		call>goto
-  	else safe? if
+  	else 
+		safe? if
 			alu>return 
 		else
 	 		[a] return
@@ -202,7 +209,10 @@ c000 constant =em	\ 48KB 存储空间 rom: 0-fff ; ram: 1000-2fff
 : again  [a] branch ;
 : aft    drop skip begin swap ; \ 与then搭配，效果：跳过一次aft和then之间的操作 常用在for循环中
 
-\ : gotocore ]asm gotocore asm[ ;
+: cpucorestate ]asm t core_s t->n d+1 alu asm[ ;
+: gotocore ]asm t p_core d-1 alu
+				n d-1 alu asm[ ;
+: showcore ]asm n core_o d-1 alu asm[ ;
 
 : noop ]asm t alu asm[ ;
 : + ]asm t+n d-1 alu asm[ ;
@@ -347,6 +357,10 @@ there constant =ulast
 \ tflash中：
 \			词名（开头一个字节存放词名字符个数）| 若干运行指令 + 返回指令			
 
+
+t: cpucorestate cpucorestate t; 
+t: gotocore gotocore t; 
+t: showcore showcore t;
 
 t: noop noop t;
 t: + + t;
@@ -591,18 +605,21 @@ t: cmove ( b1 b2 u -- ) for aft >r dup c@ r@ c! 1+ r> 1+ then next 2drop t;
 t: pack$ ( b u a -- a ) dup >r 2dup ! 1+ swap cmove r> t;
 t: ? ( a -- ) @ . t;
 t: (parse) ( b u c -- b u delta ; <string> )
-  temp ! over >r dup if
-    1- temp @ bl = if
-      for
-	  count temp @ swap - 0< invert r@ 0> and
-	   while next r> drop 0 literal dup exit
-	 then 1- r>
-    then over swap
-      for
-	  count temp @ swap - temp @ bl = if
-	   0< then
-	    while next dup >r else r> drop dup >r 1-
-     then over - r> r> - exit
+	temp ! over >r dup if
+		1- temp @ bl = if
+			for
+				count temp @ swap - 0< invert r@ 0> and
+				while
+					next r> drop 0 literal dup exit
+	 			then 1- r>
+    	then over swap
+			for
+				count temp @ swap - temp @ bl = if
+				0< then
+				while 
+					next dup >r 
+				else r> drop dup >r 1-
+     			then over - r> r> - exit
    then over r> - t;
 t: parse ( c -- b u ; <string> )
    >r
@@ -684,11 +701,33 @@ t: forget ( -- )
      drop exit
    then abort1 t;
 t: $interpret ( a -- )
-   name? ?dup if
-    @ =comp literal and
-     <?abort"> 32$literal compile-only" execute exit
-   else number? if
-     exit then abort1 then t;
+	name? ?dup if
+    	@ =comp literal and
+    	<?abort"> 32$literal compile-only"
+		dup 4000 literal < if
+			execute exit
+		else 
+			cpucorestate dup 0> if
+				dup 1 literal and if
+					drop 1 literal gotocore
+					."| 32$literal  gotocore1_ok" cr exit
+				else 
+					2 literal and if
+						2 literal gotocore
+						."| 32$literal  gotocore2_ok" cr exit
+					then
+				then 
+			else
+				drop
+				."| 32$literal  core_busy" cr 
+				execute	exit
+			then 
+		then
+	else
+		number? if
+			exit 
+		then abort1 
+	then t;
 t: [ ( -- ) [t] $interpret literal 'eval ! t; immediate
 t: .ok ( -- )
    [t] $interpret literal 'eval @ = if
@@ -794,15 +833,15 @@ t: definitions ( -- ) context @ set-current t;
 t: ?unique ( a -- a )
    dup get-current find if ."| 32$literal  redef " over .$ then drop t;
 t: <$,n> ( na -- )
-   dup c@ if
-    ?unique
-	dup count + aligned
-	dp !
-    dup last !
-    cell-
-    get-current @
-    swap ! exit
-   then drop $"| 32$literal name" abort1 t;
+	dup c@ if
+    	?unique
+		dup count + aligned
+		dp !
+    	dup last !
+    	cell-
+    	get-current @
+    	swap ! exit
+	then drop $"| 32$literal name" abort1 t;
 t: $,n ( na -- ) '$,n @execute t;
 t: $compile ( a -- )
    name? ?dup if
@@ -965,6 +1004,8 @@ t: cold ( -- )
    'boot @execute
    quit
    cold t;
+
+t: test cpucorestate dup . 1+ . t;
 
 target.1 -order set-current
 

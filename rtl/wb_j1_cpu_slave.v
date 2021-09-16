@@ -1,13 +1,13 @@
 `include "define.v"
-module wb_j1_cpu
+module wb_j1_cpu_slave
 #(
-	parameter is_master = 1,
-	parameter num = 0
+	parameter is_master = 0,
+	parameter num = 1
  )
 (
 	input clk, 
 	input rst, 
-	input wire[1:0] key2,
+	// input wire[1:0] key2,
 	
 	input  wire	[`DataWidth]		dat_i			,
 	input  wire						ack_i			,
@@ -23,17 +23,21 @@ module wb_j1_cpu
 	output wire	[`PcWidth]			inst_pc_o		,
 	
 	input  wire	[`UartDataWidth]	cpu_uart_dat_i	,
-	output reg	[`CpuNumWidth]		cpu_uart_num	,
+	// output reg	[`CpuNumWidth]		cpu_uart_num	,
 	output wire	[`UartDataWidth]	cpu_uart_dat_o	,
 	output wire						cpu_uart_rd_o	,
 	output wire						cpu_uart_wr_o	,
-	output wire						cpu_uart_adr_o	
+	output wire						cpu_uart_adr_o	,
+	
+	input  wire						cpu_start		,
+	input  wire	[`PcWidth]			cpu_start_adr	,
+	output reg						cpu_end
 );
 
 	assign cpu_num = num;
 	
 	wire cpu_state;	// 0·Ã´æ 1Ö´ĞĞ
-	assign cpu_state = data_state & insn_state;
+	assign cpu_state = data_state & insn_state & cpu_run;
 	reg data_state, insn_state;	 // 0·Ã´æ 1Ö´ĞĞ
 	reg is_fetch_inst;
 
@@ -73,12 +77,62 @@ module wb_j1_cpu
 
 
 
+/* reg aaa;
+always @*
+begin
+	if(insn == 32'h60000023 && is_master == 1)
+		aaa=1;
+	if(insn == 32'h60000c00 && is_master == 1)
+		aaa=1;
+	if(is_master == 1)
+		aaa=0;
+end  
+
+reg bbb;
+always @(posedge clk)
+begin
+	if(is_master)
+	begin
+		bbb <= 1;
+	end
+end */
+	reg cpu_run, cpu_start_inst_flag;
+	reg[`PcWidth] cpu_start_inst;
+	always @(posedge clk)
+	begin
+		if(rst)
+			cpu_run <= 0;
+		else
+		begin
+			if(cpu_start)
+			begin
+				cpu_run <= 1;
+				cpu_start_inst <= cpu_start_adr;
+				cpu_start_inst_flag <= 1;
+			end else
+				cpu_start_inst_flag <= 0;
+			
+			if(cpu_end)
+				cpu_run <= 0;
+		end 
+	end
+	
+	always @(*)
+	begin
+		if(rst | !cpu_run)
+			cpu_end = 0;
+		else if(is_alu & insn[`RToPCBit] & (rsp==0))
+			cpu_end = 1;
+		else
+			cpu_end = 0;
+	end 
+
 /*******************************È¡Ö¸ ·Ã´æ*******************************/
 
 	
 	always @(*)
 	begin
-		if(rst)
+		if(rst | !cpu_run)
 		begin
 			insn = 0;
 			data_state = 1;
@@ -103,7 +157,7 @@ module wb_j1_cpu
 			begin
 				data_state = 1;
 			end 
-			insn = (is_fetch_inst ~^ inst_ack_i) ? inst_i : _insn;
+			insn = cpu_start_inst_flag ? cpu_start_inst : ((is_fetch_inst ~^ inst_ack_i) ? inst_i : _insn);
 		end 
 	end
 
@@ -211,7 +265,7 @@ module wb_j1_cpu
 
 	always @(*)
 	begin
-		if (rst)
+		if (rst | !cpu_run)
 		begin
 			_pc = 0;
 		end else if(cpu_state)
@@ -230,7 +284,7 @@ module wb_j1_cpu
 
 	always @(posedge clk)
 	begin
-		if (rst) begin
+		if (rst | !cpu_run) begin
 			pc <= 0;
 			dsp <= 0;
 			st0 <= 0;
@@ -244,15 +298,15 @@ module wb_j1_cpu
 		end
 	end
 
-	
+/* 	
 	always @(posedge clk)
 	begin
-		if(rst)
+		if(rst | !cpu_run)
 			cpu_uart_num <= 0;
 		else
 			cpu_uart_num <= key2;
 	end 
-	
+	 */
 	
 	assign cpu_uart_rd_o = is_from_mem & (st0[`UartAddrBit] == 4'b1111) & cpu_state;
 	assign cpu_uart_wr_o = is_to_mem  & (st0[`UartAddrBit] == 4'b1111) & cpu_state;
@@ -262,7 +316,7 @@ module wb_j1_cpu
 
 	always @(*)
 	begin
-		if(rst)
+		if(rst | !cpu_run)
 		begin
 			cyc_o = 1'b0;
 			adr_o = 0;
@@ -300,7 +354,7 @@ module wb_j1_cpu
 	end
 
 	assign inst_pc_o = data_state ? _pc : pc;
-	assign inst_cyc_o = insn_state ? 0 : 1;
+	assign inst_cyc_o = (insn_state ? 0 : 1) & cpu_run;
 	
 	always @(posedge clk)
 	begin
@@ -308,8 +362,7 @@ module wb_j1_cpu
 		begin
 			is_fetch_inst <= 1;
 			_insn <= insn;
-		end 
-		else
+		end else
 		begin
 			is_fetch_inst <= 0;
 			_insn <= insn;
