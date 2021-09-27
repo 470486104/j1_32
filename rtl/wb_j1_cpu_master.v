@@ -78,30 +78,6 @@ module wb_j1_cpu_master
 
 
 
-/* reg aaa;
-always @*
-begin
-	if(insn == 32'h60000023 && is_master == 1)
-		aaa=1;
-	if(insn == 32'h60000c00 && is_master == 1)
-		aaa=1;
-	if(is_master == 1)
-		aaa=0;
-end  
-
-reg bbb;
-always @(posedge clk)
-begin
-	if(is_master)
-	begin
-		bbb <= 1;
-	end
-end
- */
-
-
-
-
 /*******************************È¡Ö¸ ·Ã´æ*******************************/
 
 	
@@ -291,7 +267,7 @@ end
 			begin
 				case(insn[14:13])
 					2'b01 : begin get_core_state = 1; end
-					2'b10 : begin start_cpu_num = st0[`CpuNumWidth]; cpu_start_adr = st1[`DataTransAddrBit]; cpu0_control = 1; end
+					2'b10 : begin start_cpu_num = st0[`CpuNumWidth]; cpu_start_adr = st1[`DataTransAddrBit]; cpu0_control = 1; uart_turn_flag = 1; _uart_num = st0[`CpuNumWidth]; end
 					2'b11 : begin _uart_num = st0[`CpuNumWidth]; uart_turn_flag = 1; end
 					default : begin get_core_state = 0; start_cpu_num = 0; cpu_start_adr = 0; cpu0_control = 0; _uart_num = 0; uart_turn_flag = 0;end
 				endcase

@@ -76,26 +76,6 @@ module wb_j1_cpu_slave
 	wire [`DataWidth] rst0 = rstack[rsp];	// ·µ»Ø¶ÑÕ» Õ»¶¥ÔªËØ
 
 
-
-/* reg aaa;
-always @*
-begin
-	if(insn == 32'h60000023 && is_master == 1)
-		aaa=1;
-	if(insn == 32'h60000c00 && is_master == 1)
-		aaa=1;
-	if(is_master == 1)
-		aaa=0;
-end  
-
-reg bbb;
-always @(posedge clk)
-begin
-	if(is_master)
-	begin
-		bbb <= 1;
-	end
-end */
 	reg cpu_run, cpu_start_inst_flag;
 	reg[`PcWidth] cpu_start_inst;
 	always @(posedge clk)
@@ -121,7 +101,7 @@ end */
 	begin
 		if(rst | !cpu_run)
 			cpu_end = 0;
-		else if(is_alu & insn[`RToPCBit] & (rsp==0))
+		else if(is_alu & insn[`RToPCBit] & (rsp==0) & insn_state)
 			cpu_end = 1;
 		else
 			cpu_end = 0;
