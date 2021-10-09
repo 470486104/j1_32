@@ -37,7 +37,7 @@ library ieee;
    use ieee.std_logic_1164.all;
 
 entity MINIUART2 is
-  generic(BRDIVISOR: INTEGER range 0 to 65535 := 108); -- Baud rate divisor  217 = 115200 at 50 Mhz £¨100MHz * 2 [CLKFX_MULTIPLY]/ 2 [CLKFX_DIVIDE] /4 £©
+  generic(BRDIVISOR: INTEGER range 0 to 65535 := 217); -- Baud rate divisor  217 = 115200 at 50 Mhz £¨100MHz * 2 [CLKFX_MULTIPLY]/ 2 [CLKFX_DIVIDE] /4 £©
   port (
 		clk:		in  STD_LOGIC;
 		rst:        in  STD_LOGIC;

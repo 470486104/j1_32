@@ -55,7 +55,7 @@ module wb_j1_cpu_slave
 	reg [`PcWidth] _pc;
 	reg [4:0] rsp; // 返回堆栈 栈顶指针
 	reg [4:0] _rsp;
-	reg _rstkW;		 // 返回堆栈写使能 
+	wire _rstkW;		 // 返回堆栈写使能 
 	reg [`DataWidth] _rstkD; //写入到返回栈数据			// RAM write enable
 	
 	wire [`PcWidth] pc_plus_1;
@@ -76,6 +76,26 @@ module wb_j1_cpu_slave
 	wire [`DataWidth] rst0 = rstack[rsp];	// 返回堆栈 栈顶元素
 
 
+
+/* reg aaa;
+always @*
+begin
+	if(insn == 32'h60000023 && is_master == 1)
+		aaa=1;
+	if(insn == 32'h60000c00 && is_master == 1)
+		aaa=1;
+	if(is_master == 1)
+		aaa=0;
+end  
+
+reg bbb;
+always @(posedge clk)
+begin
+	if(is_master)
+	begin
+		bbb <= 1;
+	end
+end */
 	reg cpu_run, cpu_start_inst_flag;
 	reg[`PcWidth] cpu_start_inst;
 	always @(posedge clk)
@@ -145,7 +165,7 @@ module wb_j1_cpu_slave
 	// st0sel is the ALU operation.	For branch and call the operation
 	// is T, for 0branch it is N.	For ALU ops it is loaded from the instruction
 	// field.
-	reg [3:0] st0sel;	//指令类型 
+/* 	reg [3:0] st0sel;	//指令类型 
 	always @(*)
 	begin
 		if(cpu_state)
@@ -158,7 +178,7 @@ module wb_j1_cpu_slave
 			endcase
 		else
 			st0sel = 0;	
-	end
+	end */
 
 
 /******************************执行阶段 *********************************/
@@ -167,10 +187,8 @@ module wb_j1_cpu_slave
 	begin
 		if(cpu_state)
 		begin
-			if (insn[`IsImmediateBit])
-				_st0 = immediate;
-			else
-				case (st0sel)
+			if (is_alu)
+				case (insn[`AluTypeBit])
 					4'b0000: _st0 = st0;
 					4'b0001: _st0 = st1;
 					4'b0010: _st0 = st0 + st1;
@@ -189,21 +207,76 @@ module wb_j1_cpu_slave
 					4'b1111: _st0 = {`DataWordLength{(st1 < st0)}};
 					default: _st0 = `ZeroWord;
 				endcase
+			else
+				_st0 = is_lit ? immediate : is_cjump ? st1 : st0;
 		end else
 			_st0 = st0;
 	end
 
-	wire is_alu = (insn[`InstTypeBit] == 3'b011);
-	wire is_lit = (insn[`IsImmediateBit]);
+	wire is_alu		= (insn[`InstTypeBit] == 3'b011);
+	wire is_lit		= (insn[`IsImmediateBit]);
+	wire is_jump	= (insn[`InstTypeBit] == 3'b000);
+	wire is_cjump	= (insn[`InstTypeBit] == 3'b001);
+	wire is_call	= (insn[`InstTypeBit] == 3'b010);
+	
+	
 	wire is_from_mem = (is_alu & (insn[`AluTypeBit] == 4'hc)); // @
 	wire is_to_mem = (is_alu & insn[`NTo_T_Bit]);	// !
 
 	assign _dstkW = (is_lit | (is_alu & insn[`TToNBit])) & cpu_state;
+	assign _rstkW = (is_call | (is_alu & insn[`TToRBit])) & cpu_state;
 
 	wire [1:0] dd = insn[`DataStackDeltaBit];	// D stack delta	栈顶指针移动
 	wire [1:0] rd = insn[`ReturnStackDeltaBit];	// R stack delta	栈顶指针移动
 
 	always @(*)
+	begin
+		if(rst)
+        	_dsp = 0;
+        else if(cpu_state)
+			if(is_lit)
+        		_dsp = dsp + 1;
+        	else if(is_alu)
+        		_dsp = dsp + {dd[1], dd[1], dd[1], dd};
+        	else if(is_cjump)
+        		_dsp = dsp -1;
+        	else
+        		_dsp = dsp;
+		else
+			_dsp = dsp;
+	end
+    
+    always @(*)
+    begin
+    	if(rst)
+        	_rsp = 0;
+        else if(cpu_state)
+			if(is_alu)
+				_rsp = rsp + {rd[1], rd[1], rd[1], rd};
+			else if(is_call)
+				_rsp = rsp + 1;
+			else
+				_rsp = rsp;
+		else
+			_rsp = rsp;
+    end
+    
+	always @(*)
+	begin
+		if(rst)
+			_rstkD = 0;
+		else if(cpu_state)
+			if(is_alu)
+				_rstkD = st0;
+			else if(is_call)
+				_rstkD = {pc_plus_1[29:0], 2'b00};
+			else
+				_rstkD = 0;
+		else
+			_rstkD = 0;
+	end
+
+	/* always @(*)
 	begin
 		if(cpu_state)
 		begin
@@ -241,18 +314,18 @@ module wb_j1_cpu_slave
 			_rstkW = 0;
 			_rstkD = 0;
 		end 
-	end
+	end */
 
 	always @(*)
 	begin
-		if (rst | !cpu_run)
+		if (rst)
 		begin
 			_pc = 0;
 		end else if(cpu_state)
 		begin
-			if ((insn[`InstTypeBit] == 3'b000) |
-					((insn[`InstTypeBit] == 3'b001) & (|st0 == 0)) |
-					(insn[`InstTypeBit] == 3'b010))
+			if (is_jump |
+					(is_cjump & (|st0 == 0)) |
+					is_call)
 				_pc = {3'b000,insn[`BranchAddrBit]};
 			else if (is_alu & insn[`RToPCBit])
 				_pc = {2'b00,rst0[`DataTransAddrBit]};

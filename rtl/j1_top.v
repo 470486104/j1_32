@@ -22,7 +22,7 @@ module j1_top(
 	wire [`UartDataWidth]	uart_din ;
 	
 	//  ±÷”
-	clock50_100 ck(.clk_in(clk_in), .clk_50(clk));
+	clock50_100 ck(.clk_in(clk_in), .clk_100(clk));
 	
 	// j1 ∂‡∫Àcpu
 	cpu_top cpu(
