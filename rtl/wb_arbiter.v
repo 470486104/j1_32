@@ -17,7 +17,7 @@ module wb_arbiter(
 	output wire 				wb_inst_stb		,
 	output wire [`PcWidth]		wb_inst_pc		,
 												
-	input  wire [`CpuNumWidth]	cpu0_num  		,
+	// input  wire [`CpuNumWidth]	cpu0_num  		,
 	input  wire [`DataWidth]	cpu0_adr_o		,
 	input  wire [`DataWidth]	cpu0_dat_o		,
 	input  wire 				cpu0_we_o 		,
@@ -30,7 +30,7 @@ module wb_arbiter(
 	output wire [`DataWidth]	cpu0_inst_i		,
 	output wire					cpu0_inst_ack_i	,
 	
-	input  wire [`CpuNumWidth]	cpu1_num  		,
+	// input  wire [`CpuNumWidth]	cpu1_num  		,
 	input  wire [`DataWidth]	cpu1_adr_o		,
 	input  wire [`DataWidth]	cpu1_dat_o		,
 	input  wire 				cpu1_we_o 		,
@@ -43,7 +43,7 @@ module wb_arbiter(
 	output wire [`DataWidth]	cpu1_inst_i		,
 	output wire					cpu1_inst_ack_i	,												
 												
-	input  wire [`CpuNumWidth]	cpu2_num  		,
+	// input  wire [`CpuNumWidth]	cpu2_num  		,
 	input  wire [`DataWidth]	cpu2_adr_o		,
 	input  wire [`DataWidth]	cpu2_dat_o		,
 	input  wire 				cpu2_we_o 		,

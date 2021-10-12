@@ -33,7 +33,7 @@ module cpu_top(
 	wire [`CpuNumWidth]	start_cpu_num   ;
 	wire [`PcWidth]		cpu_start_adr   ;
 	
-	wire [`CpuNumWidth]		cpu0_num		;
+	// wire [`CpuNumWidth]		cpu0_num		;
 	wire [`DataWidth]		cpu0_dat_i 		;
 	wire 					cpu0_ack_i 		;
 	wire [`DataWidth]		cpu0_adr_o 		;
@@ -53,7 +53,7 @@ module cpu_top(
 	wire					cpu1_end		;
 	wire					cpu1_start		;
 	wire [`PcWidth]			cpu1_start_adr	;
-	wire [`CpuNumWidth]		cpu1_num		;
+	// wire [`CpuNumWidth]		cpu1_num		;
 	wire [`DataWidth]		cpu1_dat_i 		;
 	wire 					cpu1_ack_i 		;
 	wire [`DataWidth]		cpu1_adr_o 		;
@@ -73,7 +73,7 @@ module cpu_top(
 	wire					cpu2_end		;
 	wire					cpu2_start		;
 	wire [`PcWidth]			cpu2_start_adr	;
-	wire [`CpuNumWidth]		cpu2_num		;
+	// wire [`CpuNumWidth]		cpu2_num		;
 	wire [`DataWidth]		cpu2_dat_i 		;
 	wire 					cpu2_ack_i 		;
 	wire [`DataWidth]		cpu2_adr_o 		;
@@ -141,21 +141,21 @@ module cpu_top(
 		
 	    .cpu_uart_num   (cpu_uart_num   ),
 		
-	    .cpu0_num		(cpu0_num		),
+	    // .cpu0_num		(cpu0_num		),
 	    .cpu0_uart_dat_o(cpu0_uart_dat_o),
 	    .cpu0_uart_rd_o	(cpu0_uart_rd_o	),
 	    .cpu0_uart_wr_o	(cpu0_uart_wr_o	),
 	    .cpu0_uart_adr_o(cpu0_uart_adr_o),
 	    .cpu0_uart_dat_i(cpu0_uart_dat_i),
 		
-		.cpu1_num		(cpu1_num		),
+		// .cpu1_num		(cpu1_num		),
 	    .cpu1_uart_dat_o(cpu1_uart_dat_o),
 	    .cpu1_uart_rd_o	(cpu1_uart_rd_o	),
 	    .cpu1_uart_wr_o	(cpu1_uart_wr_o	),
 	    .cpu1_uart_adr_o(cpu1_uart_adr_o),
 	    .cpu1_uart_dat_i(cpu1_uart_dat_i),
 		
-		.cpu2_num		(cpu2_num		),
+		// .cpu2_num		(cpu2_num		),
 	    .cpu2_uart_dat_o(cpu2_uart_dat_o),
 	    .cpu2_uart_rd_o	(cpu2_uart_rd_o	),
 	    .cpu2_uart_wr_o	(cpu2_uart_wr_o	),
@@ -181,7 +181,7 @@ module cpu_top(
 		.wb_inst_stb(wb_inst_stb),	
 		.wb_inst_pc	(wb_inst_pc	),
 		
-		.cpu0_num   (cpu0_num   ),
+		// .cpu0_num   (cpu0_num   ),
 		.cpu0_adr_o (cpu0_adr_o ),
 		.cpu0_dat_o (cpu0_dat_o ),
 		.cpu0_we_o  (cpu0_we_o  ),
@@ -194,7 +194,7 @@ module cpu_top(
 		.cpu0_inst_i	(cpu0_inst_i	),	
 		.cpu0_inst_ack_i(cpu0_inst_ack_i),	
 		
-		.cpu1_num   (cpu1_num   ),
+		// .cpu1_num   (cpu1_num   ),
 		.cpu1_adr_o (cpu1_adr_o ),
 		.cpu1_dat_o (cpu1_dat_o ),
 		.cpu1_we_o  (cpu1_we_o  ),
@@ -207,7 +207,7 @@ module cpu_top(
 		.cpu1_inst_i	(cpu1_inst_i	),	
 		.cpu1_inst_ack_i(cpu1_inst_ack_i),	
 		
-		.cpu2_num   (cpu2_num   ),
+		// .cpu2_num   (cpu2_num   ),
 		.cpu2_adr_o (cpu2_adr_o ),
 		.cpu2_dat_o (cpu2_dat_o ),
 		.cpu2_we_o  (cpu2_we_o  ),
@@ -256,7 +256,7 @@ module cpu_top(
 		
 		.dat_i	(cpu0_dat_i ),
 		.ack_i	(cpu0_ack_i ),
-		.cpu_num(cpu0_num	),
+		// .cpu_num(cpu0_num	),
 		.adr_o	(cpu0_adr_o ),
 		.dat_o	(cpu0_dat_o ),
 		.we_o	(cpu0_we_o  ),
@@ -287,7 +287,7 @@ module cpu_top(
 		.rst	(rst)		,
 		.dat_i	(cpu1_dat_i ),
 		.ack_i	(cpu1_ack_i ),
-		.cpu_num(cpu1_num	),
+		// .cpu_num(cpu1_num	),
 		.adr_o	(cpu1_adr_o ),
 		.dat_o	(cpu1_dat_o ),
 		.we_o	(cpu1_we_o  ),
@@ -316,7 +316,7 @@ module cpu_top(
 		.rst	(rst)		,
 		.dat_i	(cpu2_dat_i ),
 		.ack_i	(cpu2_ack_i ),
-		.cpu_num(cpu2_num	),
+		// .cpu_num(cpu2_num	),
 		.adr_o	(cpu2_adr_o ),
 		.dat_o	(cpu2_dat_o ),
 		.we_o	(cpu2_we_o  ),

@@ -7,11 +7,10 @@ module wb_j1_cpu_master
 (
 	input clk, 
 	input rst, 
-	// input wire[1:0] key2,
 	
 	input  wire	[`DataWidth]		dat_i			,
 	input  wire						ack_i			,
-	output wire	[`CpuNumWidth]		cpu_num			,
+	// output wire	[`CpuNumWidth]		cpu_num			,
 	output reg	[`DataWidth]		adr_o			,
 	output reg	[`DataWidth]		dat_o			,
 	output reg						we_o			,
@@ -35,15 +34,14 @@ module wb_j1_cpu_master
 	output reg  [`PcWidth]			cpu_start_adr   
 );
 
-	assign cpu_num = num;
+	// assign cpu_num = num;
 	
 	wire cpu_state;	// 0访存 1执行
-	assign cpu_state = data_state & insn_state;
 	reg data_state, insn_state;	 // 0访存 1执行
 	reg is_fetch_inst;
+	assign cpu_state = data_state & insn_state;
 
 	reg [`DataWidth] insn,_insn;			//指令
-	// wire [`DataWidth] _insn = insn_state ? inst_i : 32'h60000000;
 	
 	wire [`DataWidth] immediate = { 1'b0, insn[`ImmediateBit] };	
 	
@@ -61,8 +59,25 @@ module wb_j1_cpu_master
 	
 	wire [`PcWidth] pc_plus_1;
 	assign pc_plus_1 = pc + 1;
+
+	reg get_core_state, uart_turn_flag;
+	reg[`CpuNumWidth] _uart_num;
+
+	wire is_alu		= (insn[`InstTypeBit] == 3'b011);
+	wire is_lit		= (insn[`IsImmediateBit]);
+	wire is_jump	= (insn[`InstTypeBit] == 3'b000);
+	wire is_cjump	= (insn[`InstTypeBit] == 3'b001);
+	wire is_call	= (insn[`InstTypeBit] == 3'b010);
 	
-/*******************************堆栈栈顶数据更新*******************************/
+	wire is_from_mem = (is_alu & (insn[`AluTypeBit] == 4'hc)); // @
+	wire is_to_mem = (is_alu & insn[`NTo_T_Bit]);	// !
+
+	assign _dstkW = (is_lit | (is_alu & insn[`TToNBit])) & cpu_state;
+	assign _rstkW = (is_call | (is_alu & insn[`TToRBit])) & cpu_state;
+
+	wire [1:0] dd = insn[`DataStackDeltaBit];	// D stack delta	栈顶指针移动
+	wire [1:0] rd = insn[`ReturnStackDeltaBit];	// R stack delta	栈顶指针移动
+
 	// The D and R stacks
 	reg [`DataWidth] dstack[0:31];
 	reg [`DataWidth] rstack[0:31];
@@ -100,63 +115,6 @@ end
  */
 
 
-
-
-/*******************************取指 访存*******************************/
-
-	
-	always @(*)
-	begin
-		if(rst)
-		begin
-			insn = 0;
-			data_state = 1;
-		end 
-		else begin
-			if(!ack_i & (is_fetch_inst ~^ inst_ack_i))
-				if((inst_i[`InstTypeBit] == 3'b011) && ((inst_i[`AluTypeBit] == 4'hc) || inst_i[`NTo_T_Bit]))
-				begin
-					if(st0[`UartAddrBit] != 4'b1111)
-						begin
-							data_state = 0;
-						end 
-					else
-					begin
-						data_state = 1;
-					end 
-				end else
-				begin
-					data_state = 1;
-				end 
-			else
-			begin
-				data_state = 1;
-			end 
-			insn = (is_fetch_inst ~^ inst_ack_i) ? inst_i : _insn;
-		end 
-	end
-
-/******************************译码阶段 decode*********************************/
-	// st0sel is the ALU operation.	For branch and call the operation
-	// is T, for 0branch it is N.	For ALU ops it is loaded from the instruction
-	// field.
-/* 	reg [3:0] st0sel;	//指令类型 
-	always @(*)
-	begin
-		if(cpu_state)
-			case (insn[`InstTypeBit])
-				3'b000: st0sel = 0;			// ubranch
-				3'b010: st0sel = 0;			// call
-				3'b001: st0sel = 1;			// 0branch
-				3'b011: st0sel = insn[`AluTypeBit]; // ALU
-				default: st0sel = 4'b0000;
-			endcase
-		else
-			st0sel = 0;	
-	end */
-
-
-/******************************执行阶段 *********************************/
 	// Compute the new value of T.
 	always @(*)
 	begin
@@ -188,20 +146,6 @@ end
 			_st0 = st0;
 	end
 
-	wire is_alu		= (insn[`InstTypeBit] == 3'b011);
-	wire is_lit		= (insn[`IsImmediateBit]);
-	wire is_jump	= (insn[`InstTypeBit] == 3'b000);
-	wire is_cjump	= (insn[`InstTypeBit] == 3'b001);
-	wire is_call	= (insn[`InstTypeBit] == 3'b010);
-	
-	wire is_from_mem = (is_alu & (insn[`AluTypeBit] == 4'hc)); // @
-	wire is_to_mem = (is_alu & insn[`NTo_T_Bit]);	// !
-
-	assign _dstkW = (is_lit | (is_alu & insn[`TToNBit])) & cpu_state;
-	assign _rstkW = (is_call | (is_alu & insn[`TToRBit])) & cpu_state;
-
-	wire [1:0] dd = insn[`DataStackDeltaBit];	// D stack delta	栈顶指针移动
-	wire [1:0] rd = insn[`ReturnStackDeltaBit];	// R stack delta	栈顶指针移动
 	
 	always @(*)
 	begin
@@ -243,54 +187,13 @@ end
 			if(is_alu)
 				_rstkD = st0;
 			else if(is_call)
-				_rstkD = {pc_plus_1[29:0], 2'b00};
+				_rstkD = {16'b0,pc_plus_1, 2'b00};
 			else
 				_rstkD = 0;
 		else
 			_rstkD = 0;
 	end
 	
-	
-	/* always @(*)
-	begin
-		if(cpu_state)
-		begin
-			if (is_lit) begin					// literal
-				_dsp = dsp + 1;
-				_rsp = rsp;
-				_rstkW = 0;
-				_rstkD = _pc;
-			end else if (is_alu) begin				
-				_dsp = dsp + {dd[1], dd[1], dd[1], dd}; // dd是补码 若为负dd[1]=1 若为正dd[1]=0 
-				_rsp = rsp + {rd[1], rd[1], rd[1], rd};
-				_rstkW = insn[`TToRBit];
-				_rstkD = st0;
-			end else begin						// jump/call
-				// predicated jump is like DROP
-				if (insn[`InstTypeBit] == 3'b001) begin		// ?branch
-					_dsp = dsp - 1;
-				end else begin
-					_dsp = dsp;
-				end
-				if (insn[`InstTypeBit] == 3'b010) begin 	// call
-					_rsp = rsp + 1;
-					_rstkW = 1;
-					_rstkD = {pc_plus_1[`AddrTransDataBit], 2'b00};
-				end else begin
-					_rsp = rsp;
-					_rstkW = 0;
-					_rstkD = _pc;
-				end
-			end
-		end else
-		begin
-			_dsp = dsp;
-			_rsp = rsp;
-			_rstkW = 0;
-			_rstkD = 0;
-		end 
-	end */
-
 	always @(*)
 	begin
 		if (rst)
@@ -327,8 +230,6 @@ end
 	end
 
 	// 核心分配
-	reg get_core_state, uart_turn_flag;
-	reg[`CpuNumWidth] _uart_num;
 	always @(*)
 	begin
 		if(rst)
@@ -359,7 +260,7 @@ end
 	end
 	
 	
-	
+	// uart输出端口控制
 	always @(posedge clk)
 	begin
 		if(rst)
@@ -369,13 +270,34 @@ end
 		else if(cpu_uart_rd_o & !cpu_uart_adr_o)
 			cpu_uart_num <= 0;
 	end 
-	
-	
+	// uart数据 读写
 	assign cpu_uart_rd_o = is_from_mem & (st0[`UartAddrBit] == 4'b1111) & cpu_state;
 	assign cpu_uart_wr_o = is_to_mem  & (st0[`UartAddrBit] == 4'b1111) & cpu_state;
 	assign cpu_uart_adr_o = st0[0];
 	assign cpu_uart_dat_o = st1[7:0];
 
+// cpu状态
+
+	// 取数据状态
+	always @(*)
+	begin
+		if(rst)
+		begin
+			insn = 0;
+			data_state = 1;
+		end 
+		else begin
+			if(!ack_i & (is_fetch_inst ~^ inst_ack_i)) // 当前ram没有送来数据 且 成功取指时
+				if((inst_i[`InstTypeBit] == 3'b011) && ((inst_i[`AluTypeBit] == 4'hc) || inst_i[`NTo_T_Bit]))
+					data_state = (&st0[`UartAddrBit]); // 如果从ram来的指令是 @ 或 ! 指令，且读写地址不是去uart处时 cpu转为取数据状态
+				else
+					data_state = 1;
+			else
+				data_state = 1;
+			// 判断是否成功取指。其中_insn为旧指令
+			insn = (is_fetch_inst ~^ inst_ack_i) ? inst_i : _insn;
+		end 
+	end
 
 	always @(*)
 	begin
@@ -386,7 +308,7 @@ end
 			dat_o = 0;
 			we_o = 0;
 		end else if(!data_state)
-		begin
+		begin // cpu为取数据状态时 申请总线使用权
 			cyc_o = 1'b1;
 			adr_o = st0[`DataTransAddrBit];
 			dat_o = st1;
@@ -400,37 +322,28 @@ end
 		end 
 	end
 
-	always @(*)
-	begin
-		if(!inst_ack_i)
-			if(is_fetch_inst)
-			begin
-				insn_state = 0;
-			end else
-			begin
-				insn_state = 1;
-			end 
-		else
-		begin
-			insn_state = 1;		
-		end 
-	end
-
-	assign inst_pc_o = data_state ? _pc : pc;
-	assign inst_cyc_o = insn_state ? 0 : 1;
-	
 	always @(posedge clk)
 	begin
 		if((inst_pc_o[13:12] != 0) & data_state)
 		begin
-			is_fetch_inst <= 1;
-			_insn <= insn;
-		end 
-		else
+			is_fetch_inst <= 1; // 提示cpu准备去共享ram取指
+			_insn <= insn; // 存旧指令
+		end else
 		begin
 			is_fetch_inst <= 0;
 			_insn <= insn;
 		end 
 	end 
+
+	always @(*)
+	begin
+		if(!inst_ack_i)
+			insn_state = !is_fetch_inst; // 根据is_fetch_inst状态 转为共享ram取指状态
+		else
+			insn_state = 1;		
+	end
+
+	assign inst_pc_o = data_state ? _pc : pc; // 当为取数据状态时取指令的pc值不改变
+	assign inst_cyc_o = insn_state ? 0 : 1; // cpu为取指令状态时 申请总线使用权
 	
 endmodule // j1

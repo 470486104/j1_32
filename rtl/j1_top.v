@@ -2,15 +2,13 @@
 `timescale 1ns / 1ps
 module j1_top(
 	input  		clk_in	,
-	input		rst_in	,
-	// input		key2	,
+	input		rst_in	, 
 	input  		rx		,
 	output 		tx
 );
 
 	wire clk;
 	wire rst;
-	wire rst_in,key2;
 	
 	reg[`CpuNumWidth] u_n;
 	
@@ -22,13 +20,12 @@ module j1_top(
 	wire [`UartDataWidth]	uart_din ;
 	
 	//  ±÷”
-	clock50_100 ck(.clk_in(clk_in), .clk_100(clk));
+	clock100 ck(.clk_in(clk_in), .clk_100(clk));
 	
 	// j1 ∂‡∫Àcpu
 	cpu_top cpu(
 		.clk(clk),
 		.rst(rst),
-		// .key2(u_n),
 		
 		.uart_dout(uart_dout),
 		.uart_dout1(uart_dout1),

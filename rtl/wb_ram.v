@@ -45,7 +45,7 @@ module wb_ram(
 	reg [`DataWidth] rom0_data, ram_data;
 	assign dat_o = data_o_flag ? rom0_data : ram_data;
 	
-	reg[`DataWidth] addr_ram, addr_rom;
+	reg[`PcWidth] addr_ram, addr_rom;
 	reg[`PcWidth] pc;
 	always @(*)
 	begin
@@ -64,6 +64,10 @@ module wb_ram(
 			end else if(data_vaild && adr_i >= 16'h1000)
 			begin
 				addr_ram = adr_i - 16'h1000;
+				addr_rom = 0;
+			end else
+			begin
+				addr_ram = 0;
 				addr_rom = 0;
 			end 
 				
@@ -84,6 +88,8 @@ module wb_ram(
 				ram_data <= ram[addr_ram]; // ×ÛºÏ
 		if(inst_vaild)
 			inst_o <= ram[pc];
+		else
+			inst_o <= 32'h60000000;
 
 	end
 	

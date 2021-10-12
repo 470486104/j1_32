@@ -2,7 +2,7 @@
 `define RamSize				0:8191
 `define RomSize				0:4095
 
-`define PcWidth 			31:0	// 指令宽
+`define PcWidth 			13:0	// 指令宽
 `define DataWidth 			31:0	// 数据宽
 `define DataWordLength		32		// 数据字长（bit）
 
