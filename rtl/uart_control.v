@@ -48,8 +48,8 @@ module uart_control(
 			cpu_sel[2] <= 0; 
 		end else
 			case(cpu_uart_num)
-				2'b00 : begin cpu_sel[0] <= 1; cpu_sel[1] <= 0; cpu_sel[2] <= 0; end
-				2'b01 : begin cpu_sel[0] <= 0; cpu_sel[1] <= 1; cpu_sel[2] <= 0; end
+				2'b00 : begin cpu_sel[1] <= 0; cpu_sel[2] <= 0; cpu_sel[0] <= 1; end
+				2'b01 : begin cpu_sel[0] <= 0; cpu_sel[2] <= 0; cpu_sel[1] <= 1; end
 				2'b10 : begin cpu_sel[0] <= 0; cpu_sel[1] <= 0; cpu_sel[2] <= 1; end
 				default : begin cpu_sel[0] <= 0; cpu_sel[1] <= 0; cpu_sel[2] <= 0; end
 			endcase

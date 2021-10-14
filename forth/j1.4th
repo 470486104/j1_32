@@ -115,7 +115,7 @@ variable tlast \ tflash中最后一个词的指针
 variable tuser
 
 0002 constant =ver	\ 版本号
-0003 constant =ext	\ 版次号
+0005 constant =ext	\ 版次号
 0040 constant =comp \ 与某词长度or运算可使该词为只编译词不搜索，即词长度的次高位置为1
 0080 constant =imed \ 与某词长度or运算可使该词为立即词，即词长度的最高位置为1
 7f7f7f1f constant =mask \ 取出带有字符串长度的4个字节 低位为字符长度
@@ -709,11 +709,11 @@ t: $interpret ( a -- )
 		else 
 			cpucorestate dup 0> if
 				dup 1 literal and if
-					drop 1 literal gotocore
+					drop 1 literal gotocore 1 literal showcore
 					."| 32$literal  gotocore1_ok" cr exit
 				else 
 					2 literal and if
-						2 literal gotocore
+						2 literal gotocore 2 literal showcore
 						."| 32$literal  gotocore2_ok" cr exit
 					then
 				then 

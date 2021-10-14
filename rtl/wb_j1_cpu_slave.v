@@ -12,7 +12,7 @@ module wb_j1_cpu_slave
 	input  wire	[`DataWidth]		dat_i			,
 	input  wire						ack_i			,
 	// output wire	[`CpuNumWidth]		cpu_num			,
-	output reg	[`DataWidth]		adr_o			,
+	output reg	[`PcWidth]			adr_o			,
 	output reg	[`DataWidth]		dat_o			,
 	output reg						we_o			,
 	output reg						cyc_o			,
@@ -284,7 +284,7 @@ end */
 			else
 				data_state = 1;
 			// 启动指令有效时从主核处取得指令，否则判断是否成功取指。其中_insn为旧指令
-			insn = cpu_start_inst_flag ? cpu_start_inst : ((is_fetch_inst ~^ inst_ack_i) ? inst_i : _insn); 
+			insn = cpu_start_inst_flag ? {18'b0, cpu_start_inst} : ((is_fetch_inst ~^ inst_ack_i) ? inst_i : _insn); 
 		end 
 	end
 

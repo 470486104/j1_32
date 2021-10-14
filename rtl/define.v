@@ -4,6 +4,7 @@
 
 `define PcWidth 			13:0	// 指令宽
 `define DataWidth 			31:0	// 数据宽
+`define PcWordLength		14		// 地址字长（bit）
 `define DataWordLength		32		// 数据字长（bit）
 
 `define UartDataWidth		7:0		// 串口数据宽

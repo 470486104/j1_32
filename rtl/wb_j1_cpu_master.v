@@ -11,7 +11,7 @@ module wb_j1_cpu_master
 	input  wire	[`DataWidth]		dat_i			,
 	input  wire						ack_i			,
 	// output wire	[`CpuNumWidth]		cpu_num			,
-	output reg	[`DataWidth]		adr_o			,
+	output reg	[`PcWidth]			adr_o			,
 	output reg	[`DataWidth]		dat_o			,
 	output reg						we_o			,
 	output reg						cyc_o			,
@@ -243,10 +243,38 @@ end
 		end else if(cpu_state & is_alu)
 		begin
 			case(insn[14:13])
-				2'b01 : begin get_core_state = 1; end
-				2'b10 : begin start_cpu_num = st0[`CpuNumWidth]; cpu_start_adr = st1[`DataTransAddrBit]; cpu0_control = 1; uart_turn_flag = 1; _uart_num = st0[`CpuNumWidth]; end
-				2'b11 : begin _uart_num = st0[`CpuNumWidth]; uart_turn_flag = 1; end
-				default : begin get_core_state = 0; start_cpu_num = 0; cpu_start_adr = 0; cpu0_control = 0; _uart_num = 0; uart_turn_flag = 0;end
+				2'b01 : begin 
+							get_core_state = 1; 
+							start_cpu_num = 0; 
+							cpu_start_adr = 0; 
+							cpu0_control = 0; 
+							_uart_num = 0; 
+							uart_turn_flag = 0; 
+						end
+				2'b10 : begin 
+							get_core_state = 0; 
+							start_cpu_num = st0[`CpuNumWidth]; 
+							cpu_start_adr = st1[`DataTransAddrBit]; 
+							cpu0_control = 1; 
+							_uart_num = 0; 
+							uart_turn_flag = 0; 
+						end
+				2'b11 : begin 
+							get_core_state = 0; 
+							start_cpu_num = 0; 
+							cpu_start_adr = 0; 
+							cpu0_control = 0;  
+							_uart_num = st0[`CpuNumWidth]; 
+							uart_turn_flag = 1; 
+						end
+				default : begin 
+							get_core_state = 0; 
+							start_cpu_num = 0; 
+							cpu_start_adr = 0; 
+							cpu0_control = 0; 
+							_uart_num = 0;  
+							uart_turn_flag = 0; 
+						end
 			endcase
 		end else
 		begin

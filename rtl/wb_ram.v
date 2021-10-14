@@ -6,7 +6,7 @@ module wb_ram(
 	input  wire [`DataWidth]	dat_i		,
 	input  wire 				cyc_i		,
 	input  wire					stb_i		,
-	input  wire [`DataWidth]	adr_i		,
+	input  wire [`PcWidth]		adr_i		,
 	input  wire					we_i		,
 	output reg					ack_o		,
 	output wire [`DataWidth] 	dat_o		,
@@ -57,13 +57,13 @@ module wb_ram(
 		end 
 		else
 		begin
-			if(data_vaild && adr_i < 16'h1000)
+			if(data_vaild && !(|adr_i[13:12]))  // adr_i < 16'h1000
 			begin
 				addr_ram = 0;
 				addr_rom = adr_i[11:0];
-			end else if(data_vaild && adr_i >= 16'h1000)
+			end else if(data_vaild && (|adr_i[13:12])) // adr_i >= 16'h1000
 			begin
-				addr_ram = adr_i - 16'h1000;
+				addr_ram = {adr_i[13:12]-1, adr_i[11:0]};
 				addr_rom = 0;
 			end else
 			begin
@@ -72,7 +72,7 @@ module wb_ram(
 			end 
 				
 			if(inst_vaild)
-				pc = inst_pc < 16'h1000 ? inst_pc : inst_pc-16'h1000;
+				pc = |inst_pc[13:12] ? {inst_pc[13:12]-1, inst_pc[11:0]} : inst_pc; // inst_pc >= 16'h1000 
 			else
 				pc = 0;
 		end 
@@ -112,11 +112,11 @@ module wb_ram(
 			data_o_flag <= 0;
 		end	else
 		begin
-			if(data_vaild && adr_i < 16'h1000)
+			if(data_vaild && !(|adr_i[13:12]))
 			begin
 				ack_o <= 1;
 				data_o_flag <= 1;
-			end else if(data_vaild && adr_i >= 16'h1000)
+			end else if(data_vaild && (|adr_i[13:12]))
 			begin
 				ack_o <= 1;
 				data_o_flag <= 0;

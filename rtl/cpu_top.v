@@ -14,7 +14,7 @@ module cpu_top(
 
 	wire [`DataWidth]	wb_dat_i		;
 	wire 				wb_dat_ack		;
-	wire [`DataWidth]	wb_dat_adr		;
+	wire [`PcWidth]		wb_dat_adr		;
 	wire [`DataWidth]	wb_dat_o		;
 	wire 				wb_dat_we 		;
 	wire 				wb_dat_stb		;
@@ -36,7 +36,7 @@ module cpu_top(
 	// wire [`CpuNumWidth]		cpu0_num		;
 	wire [`DataWidth]		cpu0_dat_i 		;
 	wire 					cpu0_ack_i 		;
-	wire [`DataWidth]		cpu0_adr_o 		;
+	wire [`PcWidth]			cpu0_adr_o 		;
 	wire [`DataWidth]		cpu0_dat_o 		;
 	wire 					cpu0_we_o  		;
 	wire 					cpu0_cyc_o 		;
@@ -56,7 +56,7 @@ module cpu_top(
 	// wire [`CpuNumWidth]		cpu1_num		;
 	wire [`DataWidth]		cpu1_dat_i 		;
 	wire 					cpu1_ack_i 		;
-	wire [`DataWidth]		cpu1_adr_o 		;
+	wire [`PcWidth]			cpu1_adr_o 		;
 	wire [`DataWidth]		cpu1_dat_o 		;
 	wire 					cpu1_we_o  		;
 	wire 					cpu1_cyc_o 		;
@@ -76,7 +76,7 @@ module cpu_top(
 	// wire [`CpuNumWidth]		cpu2_num		;
 	wire [`DataWidth]		cpu2_dat_i 		;
 	wire 					cpu2_ack_i 		;
-	wire [`DataWidth]		cpu2_adr_o 		;
+	wire [`PcWidth]			cpu2_adr_o 		;
 	wire [`DataWidth]		cpu2_dat_o 		;
 	wire 					cpu2_we_o  		;
 	wire 					cpu2_cyc_o 		;

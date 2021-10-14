@@ -15,10 +15,11 @@ module core_control(
 	output reg					cpu2_start		,
 	output reg [`PcWidth]		cpu2_start_adr	,
 	
-	output reg[`CpuSelWidth] 	core_state
+	output wire[`CpuSelWidth] 	core_state
 );
 	
 	reg cpu1_state, cpu2_state;
+	assign core_state = {cpu2_state, cpu1_state, 1'b0};
 	
 	always @(*)
 	begin
@@ -48,38 +49,40 @@ module core_control(
 	begin
 		if(rst)
 		begin
-			cpu1_state <= 0;
-			cpu2_state <= 0;
+			cpu1_state <= 1;
+			cpu2_state <= 1;
 		end else
 		begin
 			if(cpu1_start)
-				cpu1_state <= 1;
-			else if(cpu1_end)
 				cpu1_state <= 0;
+			else if(cpu1_end)
+				cpu1_state <= 1;
 			
 			if(cpu2_start)
-				cpu2_state <= 1;
-			else if(cpu2_end)
 				cpu2_state <= 0;
+			else if(cpu2_end)
+				cpu2_state <= 1;
 		end 
 	end 
 	
-	always @(*)
+/* 	always @(*)
 	begin
 		if(rst)
 			core_state = 0;
 		else
 		begin
 			if(cpu1_state)
-				core_state = core_state & 3'b100;
+				core_state[1] = 0;
 			else
-				core_state = core_state | 3'b010;
+				core_state[1] = 1;
 			
 			if(cpu2_state)
-				core_state = core_state & 3'b010;
+				core_state[2] = 0;
 			else
-				core_state = core_state | 3'b100;
+				core_state[2] = 1;
+				
+				
 		end 
 		
-	end
+	end */
 endmodule
