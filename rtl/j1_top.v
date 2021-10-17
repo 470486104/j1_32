@@ -1,5 +1,4 @@
 `include "define.v"
-`timescale 1ns / 1ps
 module j1_top(
 	input  		clk_in	,
 	input		rst_in	, 
@@ -35,21 +34,23 @@ module j1_top(
 	    .uart_din (uart_din )
 	);
 
-	// uart
-	miniuart2 uart1(
-		.clk	  (clk),
-		.rst      (rst),
-		.rx		  (rx),
-		.tx		  (tx),
-		
-		.io_rd	  (uart_rd),
-		.io_wr	  (uart_wr),
-		.io_addr  (uart_addr),
-		.io_din   (uart_din),
-		.io_dout  (uart_dout),
-		.io_dout1  (uart_dout1)
-	); 
-	
+	// uart 
+    uart 
+    #(.BAUDRATE(300_0000), .CLKFREQ(100_000_000))
+    io_uart(
+    	.clk	  (clk),
+        .rst      (rst),
+        .rx		  (rx),
+        .tx		  (tx),
+        
+        .wr	      (uart_wr	),
+        .rd	      (uart_rd	),
+        .adr	  (uart_addr),
+        .din	  (uart_din	),
+        .dout     (uart_dout),
+        .dout1    (uart_dout1)
+    );
+    	
 
 	// ¸´Î»ÐÅºÅ
 	reg[4-1:0] count = 4'b1111;
