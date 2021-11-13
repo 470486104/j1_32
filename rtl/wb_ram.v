@@ -24,7 +24,10 @@ module wb_ram(
 	output reg  [`DataWidth]	cpu1_inst_o	,
 	
 	input  wire [`PcWidth]		cpu2_pc_i	,
-	output reg  [`DataWidth]	cpu2_inst_o	
+	output reg  [`DataWidth]	cpu2_inst_o	,
+    
+    input  wire [`PcWidth]		cpu3_pc_i	,
+	output reg  [`DataWidth]	cpu3_inst_o	
 );
 
 
@@ -37,6 +40,9 @@ module wb_ram(
 	reg [`DataWidth] rom1[`RomSize]; 
 	initial $readmemh(`ForthFile, rom1);
 
+	reg [`DataWidth] rom2[`RomSize]; 
+	initial $readmemh(`ForthFile, rom2);
+    
 	reg data_o_flag;
 	wire data_vaild, inst_vaild;
 	assign data_vaild = cyc_i & stb_i;
@@ -47,37 +53,44 @@ module wb_ram(
 	
 	reg[`PcWidth] addr_ram, addr_rom;
 	reg[`PcWidth] pc;
-	always @(*)
-	begin
-		if(rst)
-		begin
-			addr_ram = 0;
-			addr_rom = 0;
-			pc = 0;
-		end 
-		else
-		begin
-			if(data_vaild && !(|adr_i[13:12]))  // adr_i < 16'h1000
-			begin
-				addr_ram = 0;
-				addr_rom = adr_i[11:0];
-			end else if(data_vaild && (|adr_i[13:12])) // adr_i >= 16'h1000
-			begin
-				addr_ram = {adr_i[13:12]-1, adr_i[11:0]};
-				addr_rom = 0;
-			end else
-			begin
-				addr_ram = 0;
-				addr_rom = 0;
-			end 
-				
-			if(inst_vaild)
-				pc = |inst_pc[13:12] ? {inst_pc[13:12]-1, inst_pc[11:0]} : inst_pc; // inst_pc >= 16'h1000 
-			else
-				pc = 0;
-		end 
-	end 
+
 	
+    always @(*)
+    begin
+    	if(rst)
+        	pc = 0;
+        else if(inst_vaild)
+			pc = |inst_pc[13:12] ? {inst_pc[13:12]-1, inst_pc[11:0]} : inst_pc; // inst_pc >= 16'h1000
+		else
+			pc = 0;
+    end
+    
+    always @(*)
+    begin
+    	if(rst)
+        	addr_rom = 0;
+        else if(data_vaild)
+        	if(|adr_i[13:12])
+            	addr_rom = 0;
+            else
+            	addr_rom = adr_i[11:0];
+        else
+        	addr_rom = 0;
+    end
+    
+    always @(*)
+    begin
+    	if(rst)
+        	addr_ram = 0;
+        else if(data_vaild)
+        	if(|adr_i[13:12])
+            	addr_ram = {adr_i[13:12]-1, adr_i[11:0]};
+            else
+            	addr_ram = 0;
+        else
+        	addr_ram = 0;
+    end
+    
 	always @(posedge clk)
 	begin
 		if(data_vaild)
@@ -140,5 +153,9 @@ module wb_ram(
 		cpu2_inst_o <= rom1[cpu2_pc_i[11:0]];
 	end
 	
+    always @(posedge clk)
+    begin
+    	cpu3_inst_o <= rom2[cpu3_pc_i[11:0]];
+    end
 	
 endmodule

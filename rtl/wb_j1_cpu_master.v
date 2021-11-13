@@ -93,7 +93,7 @@ module wb_j1_cpu_master
 
 
 
-/* reg aaa;
+/*  reg aaa;
 always @*
 begin
 	if(insn == 32'h60000023 && is_master == 1)
@@ -111,8 +111,8 @@ begin
 	begin
 		bbb <= 1;
 	end
-end
- */
+end */
+ 
 
 
 	// Compute the new value of T.
@@ -224,7 +224,7 @@ end
 		begin
 			dsp <= _dsp;
 			pc <= _pc;
-			st0 <= get_core_state ? core_state[2:1] : _st0;
+			st0 <= get_core_state ? core_state[3:1] : _st0;
 			rsp <= _rsp;
 		end
 	end

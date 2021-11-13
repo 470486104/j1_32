@@ -36,7 +36,7 @@ module j1_top(
 
 	// uart 
     uart 
-    #(.BAUDRATE(300_0000), .CLKFREQ(100_000_000))
+    #(.BAUD_RATE(300_0000), .CLK_FREQ(100_000_000))
     io_uart(
     	.clk	  (clk),
         .rst      (rst),

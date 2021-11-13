@@ -21,7 +21,7 @@
 
 
 module test_j1;
-	localparam str_size = 29;
+	localparam str_size = 32;
 	
 	wire rx,tx;
 	reg clk_in,clk,rst;
@@ -56,7 +56,7 @@ module test_j1;
         uart_rd = 0;
         uart_addr = 0;
         uart_din = 0;
-        str[(str_size+1)*8-1:8] = ": w 30 0 do i . loop ;  w w";
+        str[(str_size+1)*8-1:8] = ": w 30 0 do i . loop ;  w w w ";
         str[7:0] = 8'h0d;
         i = 0;
         $display("初始化完成。。");

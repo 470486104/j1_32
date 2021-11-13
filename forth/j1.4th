@@ -712,9 +712,14 @@ t: $interpret ( a -- )
 					drop 1 literal gotocore 1 literal showcore
 					."| 32$literal  gotocore1_ok" cr exit
 				else 
-					2 literal and if
-						2 literal gotocore 2 literal showcore
+					dup 2 literal and if
+						drop 2 literal gotocore 2 literal showcore
 						."| 32$literal  gotocore2_ok" cr exit
+                    else
+                    	4 literal and if
+                        	3 literal gotocore 3 literal showcore
+                            ."| 32$literal  gotocore3_ok" cr exit
+                        then
 					then
 				then 
 			else

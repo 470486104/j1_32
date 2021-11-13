@@ -2,7 +2,7 @@
 `define RamSize				0:8191
 `define RomSize				0:4095
 
-`define PcWidth 			13:0	// 指令宽
+`define PcWidth 			13:0	// 地址宽
 `define DataWidth 			31:0	// 数据宽
 `define PcWordLength		14		// 地址字长（bit）
 `define DataWordLength		32		// 数据字长（bit）
@@ -30,6 +30,7 @@
 `define UartAddrBit			31:28	// uart的地址位
 
 `define CpuNumWidth 		1:0		// cpu核心数位宽
-`define CpuNum		 		3		// cpu核心数
-`define CpuSelWidth			2:0		// cpu列表宽
+`define CpuNum		 		4		// cpu核心数
+`define CpuSelWidth			3:0		// cpu列表宽
 
+`define BusWidth			127:0	// 总线宽

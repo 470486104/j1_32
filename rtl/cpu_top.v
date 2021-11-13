@@ -90,6 +90,26 @@ module cpu_top(
 	wire 					cpu2_uart_adr_o	;
 	wire [`UartDataWidth]	cpu2_uart_dat_i	;
 	
+    wire					cpu3_end		;
+	wire					cpu3_start		;
+	wire [`PcWidth]			cpu3_start_adr	;
+	// wire [`CpuNumWidth]		cpu3_num		;
+	wire [`DataWidth]		cpu3_dat_i 		;
+	wire 					cpu3_ack_i 		;
+	wire [`PcWidth]			cpu3_adr_o 		;
+	wire [`DataWidth]		cpu3_dat_o 		;
+	wire 					cpu3_we_o  		;
+	wire 					cpu3_cyc_o 		;
+	wire [`DataWidth]		cpu3_inst_i		;
+	wire					cpu3_inst_ack_i	;
+	wire					cpu3_inst_cyc_o	;
+	wire [`PcWidth]			cpu3_inst_pc_o	;	
+	wire [`UartDataWidth]	cpu3_uart_dat_o	;
+	wire					cpu3_uart_rd_o	;
+	wire					cpu3_uart_wr_o	;
+	wire 					cpu3_uart_adr_o	;
+	wire [`UartDataWidth]	cpu3_uart_dat_i	;
+    
 	wire [`PcWidth]		cpu0_pc	   ;
 	wire [`DataWidth]	cpu0_inst  ;
 	
@@ -99,6 +119,8 @@ module cpu_top(
 	wire [`PcWidth]		cpu2_pc    ;
 	wire [`DataWidth]	cpu2_inst  ;
 	
+    wire [`PcWidth]		cpu3_pc    ;
+	wire [`DataWidth]	cpu3_inst  ;
 	
 	wb_ram ram(
 		.clk	(clk),
@@ -125,7 +147,10 @@ module cpu_top(
 		.cpu1_inst_o 	(cpu1_inst  ),
 		                 
 		.cpu2_pc_i		(cpu2_pc    ),
-		.cpu2_inst_o 	(cpu2_inst  )
+		.cpu2_inst_o 	(cpu2_inst  ),
+        
+        .cpu3_pc_i		(cpu3_pc    ),
+		.cpu3_inst_o 	(cpu3_inst  )
 	); 
 	
 	uart_control uart_io(
@@ -160,7 +185,13 @@ module cpu_top(
 	    .cpu2_uart_rd_o	(cpu2_uart_rd_o	),
 	    .cpu2_uart_wr_o	(cpu2_uart_wr_o	),
 	    .cpu2_uart_adr_o(cpu2_uart_adr_o),
-	    .cpu2_uart_dat_i(cpu2_uart_dat_i)
+	    .cpu2_uart_dat_i(cpu2_uart_dat_i),
+        
+        .cpu3_uart_dat_o(cpu3_uart_dat_o),
+	    .cpu3_uart_rd_o	(cpu3_uart_rd_o	),
+	    .cpu3_uart_wr_o	(cpu3_uart_wr_o	),
+	    .cpu3_uart_adr_o(cpu3_uart_adr_o),
+	    .cpu3_uart_dat_i(cpu3_uart_dat_i)
 	); 
 	
 	wb_arbiter arbiter(
@@ -219,6 +250,18 @@ module cpu_top(
 		.cpu2_inst_pc_o	(cpu2_inst_pc_o	),
 		.cpu2_inst_i	(cpu2_inst_i	),	
 		.cpu2_inst_ack_i(cpu2_inst_ack_i),
+        
+        .cpu3_adr_o (cpu3_adr_o ),
+		.cpu3_dat_o (cpu3_dat_o ),
+		.cpu3_we_o  (cpu3_we_o  ),
+		.cpu3_cyc_o (cpu3_cyc_o ),
+		.cpu3_dat_i (cpu3_dat_i ),
+		.cpu3_ack_i (cpu3_ack_i ),
+		
+		.cpu3_inst_cyc_o(cpu3_inst_cyc_o),	
+		.cpu3_inst_pc_o	(cpu3_inst_pc_o	),
+		.cpu3_inst_i	(cpu3_inst_i	),	
+		.cpu3_inst_ack_i(cpu3_inst_ack_i),
 		
 		.cpu0_inst	(cpu0_inst	),
 		.cpu0_pc	(cpu0_pc	),		
@@ -227,7 +270,10 @@ module cpu_top(
 		.cpu1_pc	(cpu1_pc	),		
 	                 
 		.cpu2_inst	(cpu2_inst	),
-		.cpu2_pc	(cpu2_pc	)		
+		.cpu2_pc	(cpu2_pc	),
+
+		.cpu3_inst	(cpu3_inst	),
+		.cpu3_pc	(cpu3_pc	)		
 	);
 	
 	core_control core_sel(
@@ -237,12 +283,20 @@ module cpu_top(
 		.cpu0_control	(cpu0_control	),
 		.start_cpu_num  (start_cpu_num  ), 
 		.cpu_start_adr  (cpu_start_adr  ), 
+        
 		.cpu1_end		(cpu1_end		),
 		.cpu2_end		(cpu2_end		),
+		.cpu3_end		(cpu3_end		),
+        
 		.cpu1_start		(cpu1_start		),
 		.cpu1_start_adr	(cpu1_start_adr	),
+        
 		.cpu2_start		(cpu2_start		),
 		.cpu2_start_adr	(cpu2_start_adr	),
+        
+        .cpu3_start		(cpu3_start		),
+		.cpu3_start_adr	(cpu3_start_adr	),
+        
 		.core_state     (core_state     )
 	);
 	
@@ -337,4 +391,33 @@ module cpu_top(
 		.cpu_start_adr	(cpu2_start_adr	),
 		.cpu_end        (cpu2_end		)
 	);  
+    
+    wb_j1_cpu_slave 
+		#(.is_master(0), .num(3))
+	cpu3(
+		.clk	(clk)		,
+		.rst	(rst)		,
+		.dat_i	(cpu3_dat_i ),
+		.ack_i	(cpu3_ack_i ),
+		// .cpu_num(cpu2_num	),
+		.adr_o	(cpu3_adr_o ),
+		.dat_o	(cpu3_dat_o ),
+		.we_o	(cpu3_we_o  ),
+		.cyc_o	(cpu3_cyc_o ),
+		
+		.inst_i		(cpu3_inst_i	),
+		.inst_ack_i	(cpu3_inst_ack_i),
+		.inst_cyc_o	(cpu3_inst_cyc_o),
+		.inst_pc_o	(cpu3_inst_pc_o	),
+		
+		.cpu_uart_dat_i	(cpu3_uart_dat_i),
+		.cpu_uart_dat_o	(cpu3_uart_dat_o),
+		.cpu_uart_rd_o	(cpu3_uart_rd_o	),
+		.cpu_uart_wr_o	(cpu3_uart_wr_o	),
+		.cpu_uart_adr_o	(cpu3_uart_adr_o),
+		
+		.cpu_start		(cpu3_start		),
+		.cpu_start_adr	(cpu3_start_adr	),
+		.cpu_end        (cpu3_end		)
+	); 
 endmodule
