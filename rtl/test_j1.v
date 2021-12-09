@@ -78,7 +78,7 @@ module test_j1;
             begin
             	@(posedge clk);
                 	uart_rd <= 0;
-                    uart_addr[1] <= 0;
+                    uart_addr <= 0;
                     if(i <= str_size)
                     begin
 	                	uart_wr <= 1;
