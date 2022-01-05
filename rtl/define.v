@@ -18,6 +18,7 @@
 `define AluTypeBit			11:8	// alu操作的类型
 `define DataStackDeltaBit	1:0		// 数据堆栈增减位
 `define ReturnStackDeltaBit	3:2		// 返回堆栈增减位
+`define T_Bit				4		// alu的@指令位
 `define NTo_T_Bit			5		// alu的！指令位
 `define TToRBit				6		// T->R
 `define TToNBit				7		// T->N

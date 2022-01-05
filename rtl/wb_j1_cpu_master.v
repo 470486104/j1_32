@@ -8,38 +8,40 @@ module wb_j1_cpu_master
 	input clk, 
 	input rst, 
 	
-	input  wire	[`DataWidth]		dat_i			,
-	input  wire						ack_i			,
-	// output wire	[`CpuNumWidth]		cpu_num			,
-	output reg	[`PcWidth]			adr_o			,
-	output reg	[`DataWidth]		dat_o			,
-	output reg						we_o			,
-	output reg						cyc_o			,
-	
-	input  wire	[`DataWidth]		inst_i			,
-	input  wire						inst_ack_i		,
-	output wire	 					inst_cyc_o		,
-	output wire	[`PcWidth]			inst_pc_o		,
-	
-	input  wire	[`UartDataWidth]	cpu_uart_dat_i	,
-	output reg	[`CpuNumWidth]		cpu_uart_num	,
-	output wire	[`UartDataWidth]	cpu_uart_dat_o	,
-	output wire						cpu_uart_rd_o	,
-	output wire						cpu_uart_wr_o	,
-	output wire						cpu_uart_adr_o	,
-	
-	input  wire [`CpuSelWidth]		core_state		,
-	output reg						cpu0_control	,
-	output reg  [`CpuNumWidth]		start_cpu_num   ,
+    input  wire						cache_data_miss	    ,
+    input  wire						cache_data_wr_wait  ,
+    input  wire	[`DataWidth]		cache_data_dout	    ,
+    output reg						cache_data_valid	,
+    output reg						cache_data_rd_wr	,
+    output reg	[`PcWidth]			cache_data_addr	    ,
+    output reg	[`DataWidth]		cache_data_din	    ,
+    
+    input  wire						cache_inst_miss	    ,
+    input  wire	[`DataWidth]		cache_inst_dout	    ,
+    output wire						cache_inst_valid	,
+    output wire						cache_inst_rd_wr	,
+    output wire	[`PcWidth]			cache_inst_addr	    ,
+    
+	input  wire	[`UartDataWidth]	cpu_uart_dat_i		,
+	output reg	[`CpuNumWidth]		cpu_uart_num		,
+	output wire	[`UartDataWidth]	cpu_uart_dat_o		,
+	output wire						cpu_uart_rd_o		,
+	output wire						cpu_uart_wr_o		,
+	output wire						cpu_uart_adr_o		,
+                                                    	
+	input  wire [`CpuSelWidth]		core_state			,
+	output reg						cpu0_control		,
+	output reg  [`CpuNumWidth]		start_cpu_num   	,
 	output reg  [`PcWidth]			cpu_start_adr   
 );
 
 	// assign cpu_num = num;
 	
 	wire cpu_state;	// 0访存 1执行
-	reg data_state, insn_state;	 // 0访存 1执行
-	reg is_fetch_inst;
-	assign cpu_state = data_state & insn_state;
+	// reg data_state, insn_state;	 // 0访存 1执行
+	// reg is_fetch_inst;
+	// assign cpu_state = data_state & insn_state;
+	assign cpu_state = !cache_data_miss && !cache_data_wr_wait && !cache_inst_miss;
 
 	reg [`DataWidth] insn,_insn;			//指令
 	
@@ -49,6 +51,7 @@ module wb_j1_cpu_master
 	reg [4:0] _dsp;	// 在当前周期的指令执行后的 栈顶指针
 	reg [`DataWidth] st0; // 栈顶元素		T 
 	reg [`DataWidth] _st0;	 // 在当前周期的指令执行后的 栈顶数据暂存 alu的结果最终赋值到 st0
+    reg [`DataWidth] _st1;
 	wire _dstkW;		 // 数据堆栈写使胍
 	reg [`PcWidth] pc;
 	reg [`PcWidth] _pc;
@@ -69,7 +72,7 @@ module wb_j1_cpu_master
 	wire is_cjump	= (insn[`InstTypeBit] == 3'b001);
 	wire is_call	= (insn[`InstTypeBit] == 3'b010);
 	
-	wire is_from_mem = (is_alu & (insn[`AluTypeBit] == 4'hc)); // @
+	wire is_from_mem = (is_alu & insn[`T_Bit]); // @
 	wire is_to_mem = (is_alu & insn[`NTo_T_Bit]);	// !
 
 	assign _dstkW = (is_lit | (is_alu & insn[`TToNBit])) & cpu_state;
@@ -93,7 +96,7 @@ module wb_j1_cpu_master
 
 
 
-/*  reg aaa;
+reg aaa;
 always @*
 begin
 	if(insn == 32'h60000023 && is_master == 1)
@@ -102,6 +105,10 @@ begin
 		aaa=1;
 	if(is_master == 1)
 		aaa=0;
+        
+    if(is_to_mem || is_from_mem)
+    	if(st0 == 'hbe01)
+        	aaa = 1;
 end  
 
 reg bbb;
@@ -111,7 +118,11 @@ begin
 	begin
 		bbb <= 1;
 	end
-end */
+	if(cpu_uart_rd_o && !cpu_uart_adr_o)
+		bbb <= 0;
+    if(pc == 13'h054a && cpu_state)  
+    	bbb <= 0;
+end
  
 
 
@@ -120,7 +131,7 @@ end */
 	begin
 		if(cpu_state)
 		begin
-			if (is_alu)
+			if(is_alu)
 				case (insn[`AluTypeBit])
 					4'b0000: _st0 = st0;
 					4'b0001: _st0 = st1;
@@ -134,7 +145,8 @@ end */
 					4'b1001: _st0 = st1 >> st0;
 					4'b1010: _st0 = st0 - 1;
 					4'b1011: _st0 = rst0;
-					4'b1100: _st0 = (st0[`UartAddrBit] == 4'b1111) ? {24'b0,cpu_uart_dat_i} : dat_i;
+					// 4'b1100: _st0 = (st0[`UartAddrBit] == 4'b1111) ? {24'b0,cpu_uart_dat_i} : &cache_data_dout === 1'bx ? 32'h0 : cache_data_dout ;
+					4'b1100: _st0 = (st0[`UartAddrBit] == 4'b1111) ? {24'b0,cpu_uart_dat_i} : cache_data_dout ;
 					4'b1101: _st0 = st1 << st0;
 					4'b1110: _st0 = {19'b0,rsp, 3'b000, dsp};
 					4'b1111: _st0 = {`DataWordLength{(st1 < st0)}};
@@ -201,9 +213,7 @@ end */
 			_pc = 0;
 		end else if(cpu_state)
 		begin
-			if (is_jump |
-					(is_cjump & (|st0 == 0)) |
-					is_call)
+			if (is_jump | (is_cjump & (|st0 == 0)) | is_call)
 				_pc = {3'b000,insn[`BranchAddrBit]};
 			else if (is_alu & insn[`RToPCBit])
 				_pc = {2'b00,rst0[`DataTransAddrBit]};
@@ -299,79 +309,92 @@ end */
 			cpu_uart_num <= 0;
 	end 
 	// uart数据 读写
-	assign cpu_uart_rd_o = is_from_mem & (st0[`UartAddrBit] == 4'b1111) & cpu_state;
+	assign cpu_uart_rd_o = is_alu && insn[`AluTypeBit] == 4'hc && (st0[`UartAddrBit] == 4'b1111) & cpu_state;
 	assign cpu_uart_wr_o = is_to_mem  & (st0[`UartAddrBit] == 4'b1111) & cpu_state;
 	assign cpu_uart_adr_o = st0[0];
 	assign cpu_uart_dat_o = st1[7:0];
 
-// cpu状态
 
-	// 取数据状态
-	always @(*)
-	begin
-		if(rst)
-		begin
-			insn = 0;
-			data_state = 1;
-		end 
-		else begin
-			if(!ack_i & (is_fetch_inst ~^ inst_ack_i)) // 当前ram没有送来数据 且 成功取指时
-				if((inst_i[`InstTypeBit] == 3'b011) && ((inst_i[`AluTypeBit] == 4'hc) || inst_i[`NTo_T_Bit]))
-					data_state = (&st0[`UartAddrBit]); // 如果从ram来的指令是 @ 或 ! 指令，且读写地址不是去uart处时 cpu转为取数据状态
-				else
-					data_state = 1;
-			else
-				data_state = 1;
-			// 判断是否成功取指。其中_insn为旧指令
-			insn = (is_fetch_inst ~^ inst_ack_i) ? inst_i : _insn;
-		end 
-	end
-
-	always @(*)
-	begin
-		if(rst)
-		begin
-			cyc_o = 1'b0;
-			adr_o = 0;
-			dat_o = 0;
-			we_o = 0;
-		end else if(!data_state)
-		begin // cpu为取数据状态时 申请总线使用权
-			cyc_o = 1'b1;
-			adr_o = st0[`DataTransAddrBit];
-			dat_o = st1;
-			we_o = inst_i[`NTo_T_Bit];
-		end else
-		begin
-			cyc_o = 1'b0;
-			adr_o = 0;
-			dat_o = 0;
-			we_o = 0;
-		end 
-	end
-
+    
+/********************* cpu状态 ********************/
+	/* integer fw;
+    initial fw = $fopen("E:/data_out.txt","w");
+    	
 	always @(posedge clk)
 	begin
-		if((inst_pc_o[13:12] != 0) & data_state)
-		begin
-			is_fetch_inst <= 1; // 提示cpu准备去共享ram取指
-			_insn <= insn; // 存旧指令
-		end else
-		begin
-			is_fetch_inst <= 0;
-			_insn <= insn;
-		end 
-	end 
+		if(!rst && cpu_state)
+        	$fwrite(fw, "%h\n", insn);
+	end  */
+    
+	always @(*)
+	begin
+		if(rst)
+        	insn = 0;
+        else if(cpu_state)
+        	insn = cache_inst_dout;
+        else
+        	insn = _insn;
+	end
+    
+    always @(posedge clk)
+    begin
+    	if(rst)
+    		_insn <= 0;
+        else
+        	_insn <= insn;
+    end
+
+    assign cache_inst_valid = 1;
+    assign cache_inst_rd_wr = 0;
+    assign cache_inst_addr = _pc;
+    
 
 	always @(*)
 	begin
-		if(!inst_ack_i)
-			insn_state = !is_fetch_inst; // 根据is_fetch_inst状态 转为共享ram取指状态
-		else
-			insn_state = 1;		
+		if(rst)
+        	cache_data_valid = 0;
+        else if((is_to_mem || is_from_mem) && (st0[`UartAddrBit] != 4'b1111))
+        	cache_data_valid = 1;
+        else
+        	cache_data_valid = 0;
 	end
-
-	assign inst_pc_o = data_state ? _pc : pc; // 当为取数据状态时取指令的pc值不改变
-	assign inst_cyc_o = insn_state ? 0 : 1; // cpu为取指令状态时 申请总线使用权
 	
+    always @(*)
+	begin
+		if(rst)
+        	cache_data_rd_wr = 0;
+        // else if(is_to_mem && !cache_data_wr_wait)
+        else if(is_to_mem)
+        	cache_data_rd_wr = 1;
+        else
+        	cache_data_rd_wr = 0;
+	end
+    
+    always @(*)
+    begin
+    	if(rst)
+        	cache_data_addr = 0;
+        else if(is_to_mem || is_from_mem)
+        	cache_data_addr = st0[`DataTransAddrBit];
+        else
+        	cache_data_addr = 0;
+    end
+    
+    always @(posedge clk)
+    begin
+    	if(rst)
+    		_st1 <= 0;
+    	else if(cpu_state)
+    		_st1 <= st1;
+    end
+    
+    always @(*)
+    begin
+    	if(rst)
+        	cache_data_din = 0;
+        else if(is_to_mem && cpu_state)
+        	cache_data_din = st1;
+        else
+        	cache_data_din = _st1;
+    end
 endmodule // j1

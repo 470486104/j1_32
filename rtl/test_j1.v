@@ -21,21 +21,23 @@
 
 
 module test_j1;
-	localparam str_size = 32;
+	localparam str_size = 29;
 	
 	wire rx,tx;
-	reg clk_in,clk,rst;
+	reg clk_in,rst_in,clk,rst;
 	
     reg uart_wr,uart_rd;
     reg[1:0] uart_addr;
     reg[7:0] uart_din;
     wire[7:0] uart_dout;
-    reg[31:1] i;
+    reg[31:0] i;
     reg[(str_size+1)*8-1:0] str;
     
-	j1_top j1_test(.clk_in(clk_in), .rx(rx), .tx(tx));
+    integer k;
+    
+	j1_top j1_test(.clk_in(clk_in), .rx(rx), .tx(tx), .rst_in(rst_in));
 	
-    uart u_ini (
+    uart_fifo u_ini (
     	.clk	  (clk),
         .rst      (rst),
         .rx		  (tx),
@@ -49,17 +51,33 @@ module test_j1;
         .dout1    ()
     );
 	
+    /* initial
+    begin
+    	forever #(10)
+       	begin
+        	if($time > 61_0000 && $time < 61_0050)
+            begin
+            	rst_in = 0;
+            	$display("重置！");
+            end else
+            	rst_in = 1;
+       	end 
+    end  */
+    
     initial
     begin
+    	// rst_in = 1;
     	#100
     	uart_wr = 0;
         uart_rd = 0;
         uart_addr = 0;
         uart_din = 0;
-        str[(str_size+1)*8-1:8] = ": w 30 0 do i . loop ;  w w w ";
+        str[(str_size+1)*8-1:8] = ": w 30 0 do i . loop ; w w w ";
+        // str[(str_size+1)*8-1:8] = "words";
         str[7:0] = 8'h0d;
         i = 0;
         $display("初始化完成。。");
+        
     	forever #(100)
         begin
         	@(posedge clk);
@@ -74,7 +92,7 @@ module test_j1;
                 @(posedge clk);
                 	if(uart_dout != 8'h0a)
                 		$write("%c",uart_dout);
-           	end else if(!uart_dout[1] && ($time>80_0000))
+           	end else if(!uart_dout[1] && ($time>61_0000))
             begin
             	@(posedge clk);
                 	uart_rd <= 0;
@@ -84,14 +102,14 @@ module test_j1;
 	                	uart_wr <= 1;
     	            	{uart_din,str} <= {str,8'b0};
                         i <= i + 1;
-                    end 
+                    end  
             end 
             @(posedge clk);
             	uart_rd <= 0;
             	uart_addr[1] <= 0;
             	uart_wr <= 0;
         		uart_din <= 0;
-        end 
+        end
     end 
     
 	initial 

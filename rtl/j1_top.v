@@ -9,7 +9,7 @@ module j1_top(
 	wire clk;
 	wire rst;
 	
-	reg[`CpuNumWidth] u_n;
+	// reg[`CpuNumWidth] u_n;
 	
 	wire [`UartDataWidth]	uart_dout;
 	wire [`UartDataWidth]	uart_dout1;
@@ -25,17 +25,17 @@ module j1_top(
 	cpu_top cpu(
 		.clk(clk),
 		.rst(rst),
-		
-		.uart_dout(uart_dout),
-		.uart_dout1(uart_dout1),
-	    .uart_rd  (uart_rd	), 
-	    .uart_wr  (uart_wr	), 
-	    .uart_addr(uart_addr),
-	    .uart_din (uart_din )
+        
+        .uart_dout	(uart_dout	),
+		.uart_dout1	(uart_dout1	),
+	    .uart_rd  	(uart_rd	), 
+	    .uart_wr  	(uart_wr	), 
+	    .uart_addr	(uart_addr	),
+	    .uart_din 	(uart_din 	)
 	);
 
 	// uart 
-    uart 
+    uart_fifo 
     #(.BAUD_RATE(300_0000), .CLK_FREQ(100_000_000))
     io_uart(
     	.clk	  (clk),

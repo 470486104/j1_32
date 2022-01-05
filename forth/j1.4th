@@ -73,7 +73,7 @@ a: n<t  0800 ;
 a: n>>t 0900 ;
 a: t-1  0a00 ;
 a: rt   0b00 ;
-a: [t]  0c00 ;
+a: din  0c00 ;
 a: n<<t 0d00 ;
 a: dsp  0e00 ;
 a: nu<t 0f00 ;
@@ -85,6 +85,7 @@ a: core_o	 	6000 or ;
 a: t->n		0080 or ;
 a: t->r		0040 or ;
 a: n->[t]	0020 or ;
+a: [t]		0010 or ;
 a: d-1		0003 or ;
 a: d+1		0001 or ;
 a: r-1		000c or ;
@@ -124,6 +125,7 @@ variable tuser
 0008 constant =bksp	\ 退格符的ascii码
 000a constant =lf	\ 换行符的ascii码
 000d constant =cr	\ 回车符的ascii码
+0020 constant =sp	\ 空格符的ascii码
 \ 系统以字节为单位计算，cpu以字长为单位（32位系统为4个字长）
 c000 constant =em	\ 48KB 存储空间 rom: 0-fff ; ram: 1000-2fff 
 0000 constant =cold \ 冷启动位置
@@ -196,6 +198,17 @@ c000 constant =em	\ 48KB 存储空间 rom: 0-fff ; ram: 1000-2fff
 : save-target ( <name> -- ) \ 将代码编译保存为2进制文件
   parse-word w/o create-file throw >r
    tflash there r@ write-file throw r> close-file ;
+: hex#_32 ( u -- addr len )  0 <# base @ >r hex # # # # # # # # r> base ! #> ;
+: save-hex128 ( <name> -- ) 
+  parse-word w/o create-file throw
+  there 0 do 
+  		i c + dup there > if drop 0 else t32@ then over >r hex#_32 r> write-file throw 
+  		i 8 + dup there > if drop 0 else t32@ then over >r hex#_32 r> write-file throw 
+  		i 4 + dup there > if drop 0 else t32@ then over >r hex#_32 r> write-file throw 
+  		i     t32@ over >r hex# r> write-file throw 
+        \ dup >r 0 <# base @ >r hex =lf hold r> base ! #> r> write-file throw 
+  10 +loop
+  close-file throw ; \ 将代码编译保存为16进制文件
 
 : begin  there ; \ tdp指针的值
 : until  [a] ?branch ; \ 2/ 2000 or t,
@@ -231,7 +244,8 @@ c000 constant =em	\ 48KB 存储空间 rom: 0-fff ; ram: 1000-2fff
 : >r ]asm n t->r r+1 d-1 alu asm[ ;
 : r> ]asm rt t->n r-1 d+1 alu asm[ ;
 : r@ ]asm rt t->n d+1 alu asm[ ;
-: @ ]asm [t] alu asm[ ;
+: @ ]asm t [t] alu 
+		din alu asm[ ;
 : ! ]asm t n->[t] d-1 alu
     n d-1 alu asm[ ;
 : dsp ]asm dsp t->n d+1 alu asm[ ;
@@ -255,7 +269,8 @@ c000 constant =em	\ 48KB 存储空间 rom: 0-fff ; ram: 1000-2fff
     ]asm t r-1 alu
     t r-1 alu asm[ ;
 
-: dup@ ]asm [t] t->n d+1 alu asm[ ;
+: dup@ ]asm t [t] alu
+			din t->n d+1 alu asm[ ;
 : dup>r ]asm t t->r r+1 alu asm[ ;
 : 2dupxor ]asm t^n t->n d+1 alu asm[ ;
 : 2dup= ]asm n==t t->n d+1 alu asm[ ;
@@ -534,7 +549,7 @@ t: >char ( c -- c )
 t: +! ( n a -- ) tuck @ + swap ! t;
 t: 2! ( d a -- ) swap over ! cell+ ! t;
 t: 2@ ( a -- d ) dup cell+ @ swap @ t;
-t: count ( b -- b +n ) dup 1+ swap c@ t;
+t: count ( b -- b+1 n ) dup 1+ swap c@ t;
 t: here ( -- a ) dp @ t;
 t: aligned ( b -- a )
    dup 0 literal =cell literal um/mod drop dup if
@@ -593,7 +608,7 @@ t: space ( -- ) bl emit t;
 t: spaces ( +n -- ) 0 literal max  for aft space then next t;
 t: type ( b u -- ) for aft count emit then next drop t;
 t: cr ( -- ) =cr literal emit =lf literal emit t;
-t: do$ ( -- a ) r> r@ r> count + aligned >r swap >r t; compile-only
+t: do$ ( -- a ) r> r@ r> count + aligned >r swap >r t; compile-only \ 取出字符串的收尾地址 放首地址在参数栈 放尾地址在返回栈
 t: $"| ( -- a ) do$ noop t; compile-only
 t: .$ ( a -- ) count type t;
 t: ."| ( -- ) do$ .$ t; compile-only
@@ -1005,12 +1020,11 @@ t: hi ( -- )
 t: cold ( -- )
    =uzero literal =up literal =udiff literal cmove
    preset forth-wordlist dup context ! dup current 2! overt
-   8000 literal cell+ dup cell- @ $eval
-   'boot @execute
+   'boot @execute .ok
    quit
    cold t;
 
-t: test cpucorestate dup . 1+ . t;
+t: test cpucorestate dup . 1+ .  8000 literal cell+ dup cell- @ $eval t;
 
 target.1 -order set-current
 
@@ -1031,6 +1045,7 @@ newforthdp		[u] dp t32!
 
 save-target j1_32.bin
 save-hex j1_32.hex
+save-hex128 j1_32_128.hex
 
 meta.1 -order
 
