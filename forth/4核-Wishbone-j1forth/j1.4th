@@ -1003,7 +1003,7 @@ t: hi ( -- )
 	ver <# # # 2e literal hold # #>
 	type base ! cr t;
 t: cold ( -- )
-   =uzero literal =up literal =udiff literal cmove
+   =uzero literal =up literal =udiff literal cmove 
    preset forth-wordlist dup context ! dup current 2! overt
    8000 literal cell+ dup cell- @ $eval
    'boot @execute
